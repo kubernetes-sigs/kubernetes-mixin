@@ -24,6 +24,8 @@ tests:
     values: '4x15'
   - series: 'kube_poddisruptionbudget_status_current_healthy{cluster="cluster1", namespace="ns1", poddisruptionbudget="pdb1", job="kube-state-metrics"}'
     values: '3x15'
+  - series: 'kube_poddisruptionbudget_status_expected_pods{cluster="cluster1", namespace="ns1", poddisruptionbudget="pdb1", job="kube-state-metrics"}'
+    values: '4x15'
   alert_rule_test:
   - eval_time: 14m
     alertname: KubePdbNotEnoughHealthyPods
@@ -40,6 +42,23 @@ tests:
         description: "PDB ns1/pdb1 expects 1 more healthy pods. The desired number of healthy pods has not been met for at least 15m."
         runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepdbnotenoughhealthypods"
         summary: "PDB does not have enough healthy pods."
+
+- interval: 1m
+  name: KubePdbNotEnoughHealthyPods does not fire when the PDB selects no pods
+  input_series:
+  # A PDB with an absolute minAvailable reports desiredHealthy from the spec even when its
+  # selector matches nothing, so a workload scaled to zero replicas shows a permanent deficit.
+  - series: 'kube_poddisruptionbudget_status_desired_healthy{cluster="cluster1", namespace="ns1", poddisruptionbudget="pdb1", job="kube-state-metrics"}'
+    values: '1x30'
+  - series: 'kube_poddisruptionbudget_status_current_healthy{cluster="cluster1", namespace="ns1", poddisruptionbudget="pdb1", job="kube-state-metrics"}'
+    values: '0x30'
+  - series: 'kube_poddisruptionbudget_status_expected_pods{cluster="cluster1", namespace="ns1", poddisruptionbudget="pdb1", job="kube-state-metrics"}'
+    values: '0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: KubePdbNotEnoughHealthyPods
+  - eval_time: 30m
+    alertname: KubePdbNotEnoughHealthyPods
 
 - interval: 1m
   name: KubeStatefulSetUpdateNotRolledOut still fires even if another label (e.g. instance) is present
