@@ -54,3 +54,26 @@ tests:
       value: 3.96e+4 # average of the input series values times 24 (hours) times 30 (days)
     - labels: 'code_verb:apiserver_request_total:increase30d{code="500", verb="GET"}'
       value: 3.24e+3
+
+- name: proxy subresource errors do not count towards apiserver request total increase 1h
+  interval: 1m
+  input_series:
+  # 99 successful non-proxy GETs, 1 non-proxy 5xx (genuine apiserver error)
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="GET",code="200"}'
+    values: '0 10 20 50 90 99'
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="GET",code="500"}'
+    values: '0x2 1x2'
+  # a much larger stream of services/proxy 5xx (e.g. a proxied Service with
+  # no ready endpoints) must not inflate the apiserver error count
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="GET",resource="services",subresource="proxy",code="503"}'
+    values: '0 200 400 700 900 1000'
+
+  promql_expr_test:
+  - eval_time: 5m
+    expr: code_verb:apiserver_request_total:increase1h{verb="GET"}
+    exp_samples:
+    - labels: 'code_verb:apiserver_request_total:increase1h{code="200", verb="GET"}'
+      value: 99.0
+    - labels: 'code_verb:apiserver_request_total:increase1h{code="500", verb="GET"}'
+      value: 1.0
+      # note: no {code="503", verb="GET"} sample -- the 1000 proxy 503s are excluded

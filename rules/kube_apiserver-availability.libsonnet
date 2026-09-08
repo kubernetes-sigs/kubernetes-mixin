@@ -161,8 +161,8 @@
           {
             record: 'code_verb:apiserver_request_total:increase1h',
             expr: |||
-              sum by (%s, code, verb) (increase(apiserver_request_total{%s,verb=~"LIST|GET|POST|PUT|PATCH|DELETE",code=~"%s"}[1h]))
-            ||| % [$._config.clusterLabel, $._config.kubeApiserverSelector, code],
+              sum by (%s, code, verb) (increase(apiserver_request_total{%s,%s,verb=~"LIST|GET|POST|PUT|PATCH|DELETE",code=~"%s"}[1h]))
+            ||| % [$._config.clusterLabel, $._config.kubeApiserverSelector, $._config.kubeApiserverNonStreamingSelector, code],
           }
           for code in ['2..', '3..', '4..', '5..']
         ],
