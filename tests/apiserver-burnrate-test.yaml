@@ -1,0 +1,131 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../prometheus_alerts.yaml
+- ../prometheus_rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+# 600 write requests per minute, of which 60 return 5xx and a further 120 are
+# served but breach the 1s objective: 180 bad events out of 600.
+- name: write burn rate on the base window
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_sli_duration_seconds_count{job="kube-apiserver",verb="POST",subresource=""}'
+    values: '0+600x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{job="kube-apiserver",verb="POST",subresource="",le="1.0"}'
+    values: '0+480x15'
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="POST",code="200"}'
+    values: '0+540x15'
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="POST",code="500"}'
+    values: '0+60x15'
+
+  promql_expr_test:
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="write"}
+    exp_samples:
+    - labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="write"}'
+      value: 3 # (600 - 480 too slow + 60 errors) per minute = 3/s
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_events:rate5m{verb="write"}
+    exp_samples:
+    - labels: 'cluster_verb:apiserver_request_sli_events:rate5m{verb="write"}'
+      value: 10 # 600 requests per minute = 10/s
+  - eval_time: 10m
+    expr: apiserver_request:burnrate5m{verb="write"}
+    exp_samples:
+    - labels: 'apiserver_request:burnrate5m{verb="write"}'
+      value: 0.3 # 180 bad events out of 600
+
+# 600 read requests per minute, of which 60 return 5xx and a further 60 breach
+# the objective for their scope: 120 bad events out of 600.
+- name: read burn rate on the base window
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_sli_duration_seconds_count{job="kube-apiserver",verb="GET",subresource="",scope="resource"}'
+    values: '0+360x15'
+  - series: 'apiserver_request_sli_duration_seconds_count{job="kube-apiserver",verb="GET",subresource="",scope="namespace"}'
+    values: '0+180x15'
+  - series: 'apiserver_request_sli_duration_seconds_count{job="kube-apiserver",verb="GET",subresource="",scope="cluster"}'
+    values: '0+60x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{job="kube-apiserver",verb="GET",subresource="",scope="resource",le="1.0"}'
+    values: '0+300x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{job="kube-apiserver",verb="GET",subresource="",scope="namespace",le="5.0"}'
+    values: '0+180x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{job="kube-apiserver",verb="GET",subresource="",scope="cluster",le="30.0"}'
+    values: '0+60x15'
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="GET",code="200"}'
+    values: '0+540x15'
+  - series: 'apiserver_request_total{job="kube-apiserver",verb="GET",code="500"}'
+    values: '0+60x15'
+
+  promql_expr_test:
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="read"}
+    exp_samples:
+    - labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="read"}'
+      value: 2 # (600 - 540 too slow + 60 errors) per minute = 2/s
+  - eval_time: 10m
+    expr: apiserver_request:burnrate5m{verb="read"}
+    exp_samples:
+    - labels: 'apiserver_request:burnrate5m{verb="read"}'
+      value: 0.2 # 120 bad events out of 600
+
+# The long windows average the intermediate series rather than reading the raw
+# series, so they have to stay request weighted: a burst of healthy traffic must
+# dilute an earlier spell of badness in proportion to the requests served, not
+# count as an equally weighted half of the window.
+- name: long window burn rate is request weighted
+  interval: 1m
+  input_series:
+  # First half: 6 bad out of 10 requests per second. Second half: 1 out of 102.
+  - series: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="write"}'
+    values: '6x29 1x29'
+  - series: 'cluster_verb:apiserver_request_sli_events:rate5m{verb="write"}'
+    values: '10x29 102x29'
+
+  promql_expr_test:
+  - eval_time: 59m
+    expr: apiserver_request:burnrate1d{verb="write"}
+    exp_samples:
+    # Request weighted: mean bad 3.5/s over mean total 56/s. Averaging the two
+    # per-half ratios instead would give (0.6 + 0.0098) / 2 = 0.3049, which
+    # would overstate the burn rate by almost five times.
+    - labels: 'apiserver_request:burnrate1d{verb="write"}'
+      value: 0.0625
+
+# While the request rate holds steady the averaged long window is exactly the
+# base window: the approximation only trails the raw value where the rate moves.
+- name: long window burn rate matches base window at a steady rate
+  interval: 1m
+  input_series:
+  - series: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="read"}'
+    values: '3x59'
+  - series: 'cluster_verb:apiserver_request_sli_events:rate5m{verb="read"}'
+    values: '10x59'
+
+  promql_expr_test:
+  - eval_time: 59m
+    expr: apiserver_request:burnrate1d{verb="read"}
+    exp_samples:
+    - labels: 'apiserver_request:burnrate1d{verb="read"}'
+      value: 0.3
+  - eval_time: 59m
+    expr: apiserver_request:burnrate3d{verb="read"}
+    exp_samples:
+    - labels: 'apiserver_request:burnrate3d{verb="read"}'
+      value: 0.3

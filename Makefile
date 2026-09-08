@@ -160,8 +160,12 @@ clean:
 	# Remove all files and directories ignored by git.
 	git clean -Xfd .
 
+.PHONY: config-test
+config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
+	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
+
 .PHONY: test
-test: $(PROMTOOL_BIN) prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 
 $(BIN_DIR):
