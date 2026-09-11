@@ -15,9 +15,11 @@ limitations under the License. -->
 
 # Prometheus Monitoring Mixin for Kubernetes
 
-[![ci](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml/badge.svg)](https://github.com/kubernetes-monitoring/kubernetes-mixin/actions/workflows/ci.yaml)
+[![ci](https://github.com/kubernetes-sigs/kubernetes-mixin/actions/workflows/ci.yaml/badge.svg)](https://github.com/kubernetes-sigs/kubernetes-mixin/actions/workflows/ci.yaml)
 
 A set of Grafana dashboards and Prometheus alerts for Kubernetes.
+
+This repository was transferred from [`kubernetes-monitoring/kubernetes-mixin`](https://github.com/kubernetes-monitoring/kubernetes-mixin) to [`kubernetes-sigs/kubernetes-mixin`](https://github.com/kubernetes-sigs/kubernetes-mixin). Please reference `github.com/kubernetes-sigs/kubernetes-mixin` in your mixins going forward. Existing references to `github.com/kubernetes-monitoring/kubernetes-mixin` continue to work via GitHub's transfer redirects.
 
 ## Local development
 
@@ -54,7 +56,7 @@ make dev-down
 
 ## Releases
 
-> Note: Releases up until `release-0.12` are changes in their own branches. Changelogs are included in releases starting from [version-0.13.0](https://github.com/kubernetes-monitoring/kubernetes-mixin/releases/tag/version-0.13.0).
+> Note: Releases up until `release-0.12` are changes in their own branches. Changelogs are included in releases starting from [version-0.13.0](https://github.com/kubernetes-sigs/kubernetes-mixin/releases/tag/version-0.13.0).
 
 | Release branch | Kubernetes Compatibility | Prometheus Compatibility | Kube-state-metrics Compatibility |
 |----------------|--------------------------|--------------------------|----------------------------------|
@@ -138,7 +140,7 @@ $ brew install jsonnet
 Then, grab the mixin, its dependencies, and build:
 
 ```
-$ git clone https://github.com/kubernetes-monitoring/kubernetes-mixin
+$ git clone https://github.com/kubernetes-sigs/kubernetes-mixin
 $ cd kubernetes-mixin
 $ make generate
 ```
@@ -253,7 +255,7 @@ Then, install the kubernetes-mixin:
 
 ```
 $ jb init
-$ jb install github.com/kubernetes-monitoring/kubernetes-mixin
+$ jb install github.com/kubernetes-sigs/kubernetes-mixin
 ```
 
 Generate the alerts, rules and dashboards:

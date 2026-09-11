@@ -24,7 +24,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NOTICE_FILE="${REPO_ROOT}/NOTICE"
-GITHUB_REPO="kubernetes-monitoring/kubernetes-mixin"
+GITHUB_REPO="kubernetes-sigs/kubernetes-mixin"
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
   echo "⚠️  Warning: GITHUB_TOKEN not set. API calls will be rate-limited (60/hr)." >&2

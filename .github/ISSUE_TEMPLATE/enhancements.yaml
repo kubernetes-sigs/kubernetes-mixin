@@ -21,7 +21,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please use this template while proposing an enhancement and provide as much information as possible. If this is a feature request, please ensure that [a consensus has been reached](https://github.com/kubernetes-monitoring/kubernetes-mixin/blob/master/CONTRIBUTING.md?plain=1#L24) before submitting.
+        Please use this template while proposing an enhancement and provide as much information as possible. If this is a feature request, please ensure that [a consensus has been reached](https://github.com/kubernetes-sigs/kubernetes-mixin/blob/master/CONTRIBUTING.md?plain=1#L24) before submitting.
   - type: textarea
     id: idea
     attributes:

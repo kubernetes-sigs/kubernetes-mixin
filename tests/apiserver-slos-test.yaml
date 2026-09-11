@@ -42,7 +42,7 @@ tests:
         short: "5m"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
 
 # Both halves of a pair have to be over the threshold. A long window still above it while
@@ -97,7 +97,7 @@ tests:
         short: "5m"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
 
 # The same burn rate on one verb only stays under the threshold, which is what the test
@@ -136,7 +136,7 @@ tests:
         short: "6h"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
 
 # A burn severe enough to cross every threshold has to raise all four pairs, which pins
@@ -170,7 +170,7 @@ tests:
         short: "5m"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
     - exp_labels:
         cluster: "cluster1"
@@ -179,7 +179,7 @@ tests:
         short: "30m"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
     - exp_labels:
         cluster: "cluster1"
@@ -188,7 +188,7 @@ tests:
         short: "2h"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
     - exp_labels:
         cluster: "cluster1"
@@ -197,5 +197,5 @@ tests:
         short: "6h"
       exp_annotations:
         description: "The Kube API server is burning too much error budget."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
         summary: "The Kube API server is burning too much error budget."
