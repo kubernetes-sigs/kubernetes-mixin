@@ -1,0 +1,201 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../prometheus_alerts.yaml
+
+evaluation_interval: 1m
+
+tests:
+# The critical pair needs both the 1h and the 5m burn rate above 14.4 times the 1% error
+# budget, so above 0.144.
+- name: fast burn on both windows fires the critical alert
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.2x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.2x10'
+
+  alert_rule_test:
+  - eval_time: 1m # for: 2m not met yet
+    alertname: KubeAPIErrorBudgetBurn
+  - eval_time: 3m
+    alertname: KubeAPIErrorBudgetBurn
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "critical"
+        long: "1h"
+        short: "5m"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+
+# Both halves of a pair have to be over the threshold. A long window still above it while
+# the short one has recovered means the incident is over, and must not alert.
+- name: burn on the long window alone does not fire
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.2x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.05x10'
+
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPIErrorBudgetBurn
+
+# The mirror case: a short spike that the long window has not caught up with yet.
+- name: burn on the short window alone does not fire
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.05x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.2x10'
+
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPIErrorBudgetBurn
+
+# The burn rates are recorded per verb and summed before the comparison, so read and write
+# budget burn adds up.
+- name: read and write burn rates are summed before the threshold
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.08x10'
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="write"}'
+    values: '0.08x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.08x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="write"}'
+    values: '0.08x10'
+
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: KubeAPIErrorBudgetBurn
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "critical"
+        long: "1h"
+        short: "5m"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+
+# The same burn rate on one verb only stays under the threshold, which is what the test
+# above is contrasted against.
+- name: one verb below the threshold does not fire
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.08x10'
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.08x10'
+
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPIErrorBudgetBurn
+
+# The slowest pair has the lowest threshold, 1 times the budget, and the longest for.
+- name: slow burn on 3d and 6h fires the warning alert
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate3d{cluster="cluster1",verb="read"}'
+    values: '0.02x240'
+  - series: 'apiserver_request:burnrate6h{cluster="cluster1",verb="read"}'
+    values: '0.02x240'
+
+  alert_rule_test:
+  - eval_time: 2h # for: 3h not met yet
+    alertname: KubeAPIErrorBudgetBurn
+  - eval_time: 4h
+    alertname: KubeAPIErrorBudgetBurn
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "warning"
+        long: "3d"
+        short: "6h"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+
+# A burn severe enough to cross every threshold has to raise all four pairs, which pins
+# the window labels each one carries.
+- name: severe burn fires every window pair
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request:burnrate5m{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate30m{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate1h{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate2h{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate6h{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate1d{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+  - series: 'apiserver_request:burnrate3d{cluster="cluster1",verb="read"}'
+    values: '0.2x240'
+
+  alert_rule_test:
+  - eval_time: 4h
+    alertname: KubeAPIErrorBudgetBurn
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "critical"
+        long: "1h"
+        short: "5m"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "critical"
+        long: "6h"
+        short: "30m"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "warning"
+        long: "1d"
+        short: "2h"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+    - exp_labels:
+        cluster: "cluster1"
+        severity: "warning"
+        long: "3d"
+        short: "6h"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget."
+        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
