@@ -129,6 +129,53 @@ local timeSeries = g.panel.timeSeries;
           + prometheus.withLegendFormat('__auto'),
         ]),
 
+        tsPanel.new('CPU Throttling')
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new(
+            '${datasource}',
+            queries.cpuThrottling($._config)
+          )
+          + prometheus.withLegendFormat('__auto'),
+        ])
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMin(0)
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMax(1)
+        + tsPanel.fieldConfig.defaults.custom.thresholdsStyle.withMode('dashed+area')
+        + tsPanel.fieldConfig.defaults.custom.withAxisColorMode('thresholds')
+        + tsPanel.standardOptions.withOverrides([
+          {
+            matcher: {
+              id: 'byFrameRefID',
+              options: 'A',
+            },
+            properties: [
+              {
+                id: 'thresholds',
+                value: {
+                  mode: 'absolute',
+                  steps: [
+                    {
+                      color: 'green',
+                      value: null,
+                    },
+                    {
+                      color: 'red',
+                      value: $._config.cpuThrottlingPercent / 100,
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'color',
+                value: {
+                  mode: 'thresholds',
+                  seriesBy: 'lastNotNull',
+                },
+              },
+            ],
+          },
+        ]),
+
         table.new('CPU Quota')
         + table.queryOptions.withTargets([
           prometheus.new('${datasource}', queries.podsByNamespace($._config))
@@ -158,6 +205,14 @@ local timeSeries = g.panel.timeSeries;
           prometheus.new('${datasource}', queries.cpuUsageVsLimits($._config))
           + prometheus.withInstant(true)
           + prometheus.withFormat('table'),
+
+          prometheus.new('${datasource}', queries.cpuThrottling($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
+
+          prometheus.new('${datasource}', queries.cpuThrottledSeconds($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
         ])
 
         + table.queryOptions.withTransformations([
@@ -178,6 +233,8 @@ local timeSeries = g.panel.timeSeries;
               'Time 5': true,
               'Time 6': true,
               'Time 7': true,
+              'Time 8': true,
+              'Time 9': true,
             },
             indexByName: {
               'Time 1': 0,
@@ -187,14 +244,18 @@ local timeSeries = g.panel.timeSeries;
               'Time 5': 4,
               'Time 6': 5,
               'Time 7': 6,
-              namespace: 7,
-              'Value #A': 8,
-              'Value #B': 9,
-              'Value #C': 10,
-              'Value #D': 11,
-              'Value #E': 12,
-              'Value #F': 13,
-              'Value #G': 14,
+              'Time 8': 7,
+              'Time 9': 8,
+              namespace: 9,
+              'Value #A': 10,
+              'Value #B': 11,
+              'Value #C': 12,
+              'Value #D': 13,
+              'Value #E': 14,
+              'Value #F': 15,
+              'Value #G': 16,
+              'Value #H': 17,
+              'Value #I': 18,
             },
             renameByName: {
               namespace: 'Namespace',
@@ -205,6 +266,8 @@ local timeSeries = g.panel.timeSeries;
               'Value #E': 'CPU Requests %',
               'Value #F': 'CPU Limits',
               'Value #G': 'CPU Limits %',
+              'Value #H': 'CPU Throttling %',
+              'Value #I': 'CPU Throttled Seconds',
             },
           }),
         ])
@@ -219,6 +282,18 @@ local timeSeries = g.panel.timeSeries;
               {
                 id: 'unit',
                 value: 'percentunit',
+              },
+            ],
+          },
+          {
+            matcher: {
+              id: 'byName',
+              options: 'CPU Throttled Seconds',
+            },
+            properties: [
+              {
+                id: 'unit',
+                value: 's',
               },
             ],
           },

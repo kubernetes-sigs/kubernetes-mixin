@@ -64,6 +64,8 @@ local timeSeries = g.panel.timeSeries;
 
       local podCountQuery = queries.podCount($._config);
       local cpuLimitsQuery = queries.cpuLimits($._config);
+      local cpuThrottlingQuery = queries.cpuThrottling($._config);
+      local cpuThrottledSecondsQuery = queries.cpuThrottledSeconds($._config);
 
       local memUsageQuery = queries.memUsage($._config);
       local memRequestsQuery = queries.memRequests($._config);
@@ -142,6 +144,51 @@ local timeSeries = g.panel.timeSeries;
           },
         ]),
 
+        tsPanel.new('CPU Throttling')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new('${datasource}', cpuThrottlingQuery)
+          + prometheus.withLegendFormat('{{workload}} - {{workload_type}}'),
+        ])
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMin(0)
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMax(1)
+        + tsPanel.fieldConfig.defaults.custom.thresholdsStyle.withMode('dashed+area')
+        + tsPanel.fieldConfig.defaults.custom.withAxisColorMode('thresholds')
+        + tsPanel.standardOptions.withOverrides([
+          {
+            matcher: {
+              id: 'byFrameRefID',
+              options: 'A',
+            },
+            properties: [
+              {
+                id: 'thresholds',
+                value: {
+                  mode: 'absolute',
+                  steps: [
+                    {
+                      color: 'green',
+                      value: null,
+                    },
+                    {
+                      color: 'red',
+                      value: $._config.cpuThrottlingPercent / 100,
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'color',
+                value: {
+                  mode: 'thresholds',
+                  seriesBy: 'lastNotNull',
+                },
+              },
+            ],
+          },
+        ]),
+
         table.new('CPU Quota')
         + table.gridPos.withW(24)
         + table.queryOptions.withTargets([
@@ -163,6 +210,12 @@ local timeSeries = g.panel.timeSeries;
           prometheus.new('${datasource}', cpuUsageQuery + '/' + cpuLimitsQuery)
           + prometheus.withInstant(true)
           + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', cpuThrottlingQuery)
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', cpuThrottledSecondsQuery)
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
         ])
         + table.queryOptions.withTransformations([
           table.queryOptions.transformation.withId('joinByField')
@@ -181,11 +234,15 @@ local timeSeries = g.panel.timeSeries;
               'Time 4': true,
               'Time 5': true,
               'Time 6': true,
+              'Time 7': true,
+              'Time 8': true,
               'workload_type 2': true,
               'workload_type 3': true,
               'workload_type 4': true,
               'workload_type 5': true,
               'workload_type 6': true,
+              'workload_type 7': true,
+              'workload_type 8': true,
             },
             indexByName: {
               'Time 1': 0,
@@ -194,19 +251,25 @@ local timeSeries = g.panel.timeSeries;
               'Time 4': 3,
               'Time 5': 4,
               'Time 6': 5,
-              workload: 6,
-              'workload_type 1': 7,
-              'Value #A': 8,
-              'Value #B': 9,
-              'Value #C': 10,
-              'Value #D': 11,
-              'Value #E': 12,
-              'Value #F': 13,
-              'workload_type 2': 14,
-              'workload_type 3': 15,
-              'workload_type 4': 16,
-              'workload_type 5': 17,
-              'workload_type 6': 18,
+              'Time 7': 6,
+              'Time 8': 7,
+              workload: 8,
+              'workload_type 1': 9,
+              'Value #A': 10,
+              'Value #B': 11,
+              'Value #C': 12,
+              'Value #D': 13,
+              'Value #E': 14,
+              'Value #F': 15,
+              'Value #G': 16,
+              'Value #H': 17,
+              'workload_type 2': 18,
+              'workload_type 3': 19,
+              'workload_type 4': 20,
+              'workload_type 5': 21,
+              'workload_type 6': 22,
+              'workload_type 7': 23,
+              'workload_type 8': 24,
             },
             renameByName: {
               workload: 'Workload',
@@ -217,6 +280,8 @@ local timeSeries = g.panel.timeSeries;
               'Value #D': 'CPU Requests %',
               'Value #E': 'CPU Limits',
               'Value #F': 'CPU Limits %',
+              'Value #G': 'CPU Throttling %',
+              'Value #H': 'CPU Throttled Seconds',
             },
           }),
         ])
@@ -231,6 +296,18 @@ local timeSeries = g.panel.timeSeries;
               {
                 id: 'unit',
                 value: 'percentunit',
+              },
+            ],
+          },
+          {
+            matcher: {
+              id: 'byName',
+              options: 'CPU Throttled Seconds',
+            },
+            properties: [
+              {
+                id: 'unit',
+                value: 's',
               },
             ],
           },

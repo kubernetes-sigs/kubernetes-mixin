@@ -36,6 +36,28 @@
 
   cpuLimits(config):: std.strReplace(self.cpuRequests(config), 'requests', 'limits'),
 
+  cpuThrottling(config):: |||
+    sum(
+        increase(container_cpu_cfs_throttled_periods_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace"}[%(grafanaIntervalVar)s])
+      * on(%(clusterLabel)s, namespace, pod)
+        group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{%(clusterLabel)s="$cluster", namespace="$namespace", workload_type=~"$type"}
+    ) by (workload, workload_type)
+    /
+    sum(
+        increase(container_cpu_cfs_periods_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace"}[%(grafanaIntervalVar)s])
+      * on(%(clusterLabel)s, namespace, pod)
+        group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{%(clusterLabel)s="$cluster", namespace="$namespace", workload_type=~"$type"}
+    ) by (workload, workload_type)
+  ||| % config,
+
+  cpuThrottledSeconds(config):: |||
+    sum(
+        increase(container_cpu_cfs_throttled_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace"}[%(grafanaIntervalVar)s])
+      * on(%(clusterLabel)s, namespace, pod)
+        group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{%(clusterLabel)s="$cluster", namespace="$namespace", workload_type=~"$type"}
+    ) by (workload, workload_type)
+  ||| % config,
+
   memUsage(config):: |||
     sum(
         max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container)(container_memory_working_set_bytes{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", container!="", image!=""})

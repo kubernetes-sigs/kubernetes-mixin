@@ -46,6 +46,15 @@
   cpuUsageVsLimits(config)::
     'sum(max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container)(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate5m{%(clusterLabel)s="$cluster"})) by (namespace) / sum(namespace_cpu:kube_pod_container_resource_limits:sum{%(clusterLabel)s="$cluster"}) by (namespace)' % config,
 
+  cpuThrottling(config):: |||
+    sum(increase(container_cpu_cfs_throttled_periods_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (namespace)
+    /
+    sum(increase(container_cpu_cfs_periods_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (namespace)
+  ||| % config,
+
+  cpuThrottledSeconds(config)::
+    'sum(increase(container_cpu_cfs_throttled_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (namespace)' % config,
+
   // Memory Queries
   memoryUtilisation(config)::
     '1 - sum(:node_memory_MemAvailable_bytes:sum{%(clusterLabel)s="$cluster"}) / sum(node_memory_MemTotal_bytes{%(nodeExporterSelector)s,%(clusterLabel)s="$cluster"})' % config,
