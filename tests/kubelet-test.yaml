@@ -76,4 +76,4 @@ tests:
       exp_annotations:
         summary: "Kubelet Pod startup latency is too high."
         description: "Kubelet Pod startup 99th percentile latency is 98.01 seconds on node ip-172-0-0-1."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletpodstartuplatencyhigh"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletpodstartuplatencyhigh"

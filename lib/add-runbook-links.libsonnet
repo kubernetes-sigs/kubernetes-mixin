@@ -25,7 +25,7 @@ local lower(x) =
 
 {
   _config+:: {
-    runbookURLPattern: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-%s',
+    runbookURLPattern: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-%s',
   },
 
   prometheusAlerts+::

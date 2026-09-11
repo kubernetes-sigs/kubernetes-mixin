@@ -43,7 +43,7 @@ tests:
       exp_annotations:
         description: "30% throttling of CPU in namespace default for container test-container in pod test-pod."
         summary: "Processes experience elevated CPU throttling."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-cputhrottlinghigh"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-cputhrottlinghigh"
 
 - interval: 1m
   name: KubeQuotaAlmostFull fires when quota usage is above 90%
@@ -71,7 +71,7 @@ tests:
       exp_annotations:
         description: "Namespace test-ns is using 95% of its requests.cpu quota."
         summary: "Namespace quota is going to be full."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaalmostfull"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaalmostfull"
 
 - interval: 1m
   name: KubeQuotaFullyUsed fires when quota is 100% used
@@ -99,7 +99,7 @@ tests:
       exp_annotations:
         description: "Namespace test-ns is using 100% of its requests.memory quota."
         summary: "Namespace quota is fully used."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotafullyused"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotafullyused"
 
 - interval: 1m
   name: KubeQuotaExceeded fires when quota usage exceeds 100%
@@ -127,4 +127,4 @@ tests:
       exp_annotations:
         description: "Namespace test-ns is using 120% of its pods quota."
         summary: "Namespace quota has exceeded the limits."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaexceeded"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubequotaexceeded"

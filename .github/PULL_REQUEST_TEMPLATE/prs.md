@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. -->
 <!--  Thank you for sending a pull request! We highly appreciate contributions. Here are some tips for you:
-1. If this is your first time, read our contributor guidelines: https://github.com/kubernetes-monitoring/kubernetes-mixin/blob/master/CONTRIBUTING.md
+1. If this is your first time, read our contributor guidelines: https://github.com/kubernetes-sigs/kubernetes-mixin/blob/master/CONTRIBUTING.md
 2. If you want *faster* PR reviews, read how: https://git.k8s.io/community/contributors/guide/pull-requests.md#best-practices-for-faster-reviews
 3. If the PR is unfinished, please mark it as a draft, to prevent false pings and noisy review cycles.
 -->

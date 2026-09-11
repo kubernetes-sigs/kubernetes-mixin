@@ -23,7 +23,7 @@ It is a recommended practice that you add an annotation of "runbook" to every pr
 
 Matthew Skelton & Rob Thatcher have an excellent [run book template](https://github.com/SkeltonThatcher/run-book-template). This template will help teams to fully consider most aspects of reliably operating most interesting software systems, if only to confirm that "this section definitely does not apply here" - a valuable realization.
 
-This page collects this repositories alerts and begins the process of describing what they mean and how it might be addressed. Links from alerts to this page are added [automatically](https://github.com/kubernetes-monitoring/kubernetes-mixin/blob/master/lib/add-runbook-links.libsonnet).
+This page collects this repositories alerts and begins the process of describing what they mean and how it might be addressed. Links from alerts to this page are added [automatically](https://github.com/kubernetes-sigs/kubernetes-mixin/blob/master/lib/add-runbook-links.libsonnet).
 
 ### Group Name: "kubernetes-absent"
 
@@ -250,7 +250,7 @@ This page collects this repositories alerts and begins the process of describing
 ##### Alert Name: "KubeNodeEviction"
 + *Message*: `Node {{ $labels.node }} is evicting Pods due to {{ $labels.eviction_signal }}. Eviction occurs when eviction thresholds are crossed, typically caused by Pods exceeding RAM/ephemeral-storage limits.`
 + *Severity*: info
-+ *Runbook*: [Link](https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodeeviction)
++ *Runbook*: [Link](https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodeeviction)
 
 ##### Alert Name: "KubeletPlegDurationHigh"
 + *Message*: `The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of {{ $value }} seconds on node {{ $labels.node }}.`

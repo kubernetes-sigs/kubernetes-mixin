@@ -50,7 +50,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolume is filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes is only 1.562% free.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
 
 # Don't alert when PVC access_mode is ReadOnlyMany
 - interval: 1m
@@ -137,7 +137,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolume is filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes is only 1.294% free.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
 
 - interval: 1m
   input_series:
@@ -162,7 +162,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolume is filling up."
         description: 'Based on recent sampling, the PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes is expected to fill up within four days. Currently 1.263% is available.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
     - exp_labels:
         job: kubelet
         namespace: monitoring
@@ -172,7 +172,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolume is filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes is only 1.263% free.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup
 
 # Block volume mounts can report 0 for the kubelet_volume_stats_used_bytes metric but it shouldn't trigger the KubePersistentVolumeFillingUp alert.
 # See https://github.com/kubernetes/kubernetes/commit/b997e0e4d6ccbead435a47d6ac75b0db3d17252f for details.
@@ -249,7 +249,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolumeInodes are filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes only has 1.562% free inodes.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
 
 # Don't alert when PVC access_mode is ReadOnlyMany
 - interval: 1m
@@ -336,7 +336,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolumeInodes are filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes only has 1.294% free inodes.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
 
 - interval: 1m
   input_series:
@@ -361,7 +361,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolumeInodes are filling up."
         description: 'Based on recent sampling, the PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes is expected to run out of inodes within four days. Currently 1.263% of its inodes are free.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
     - exp_labels:
         job: kubelet
         namespace: monitoring
@@ -371,7 +371,7 @@ tests:
       exp_annotations:
         summary: "PersistentVolumeInodes are filling up."
         description: 'The PersistentVolume claimed by somepvc in Namespace monitoring on Cluster kubernetes only has 1.263% free inodes.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumeinodesfillingup
 
 # Block volume mounts can report 0 for the kubelet_volume_stats_inodes_used metric but it shouldn't trigger the KubePersistentVolumeInodesFillingUp alert.
 # See https://github.com/kubernetes/kubernetes/commit/b997e0e4d6ccbead435a47d6ac75b0db3d17252f for details.
@@ -441,7 +441,7 @@ tests:
       exp_annotations:
         summary: "Kubelet is running at capacity."
         description: "Kubelet 'node0' is running at 100% of its Pod capacity."
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubelettoomanypods
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubelettoomanypods
 
 - name: KubeletTooManyPods alert (multi-node with instance as node name)
   interval: 1m
@@ -472,7 +472,7 @@ tests:
       exp_annotations:
         summary: "Kubelet is running at capacity."
         description: "Kubelet 'node1' is running at 100% of its Pod capacity."
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubelettoomanypods
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubelettoomanypods
 
 - interval: 1m
   input_series:
@@ -606,7 +606,7 @@ tests:
       exp_annotations:
         summary: "Kubelet Pod Lifecycle Event Generator is taking too long to relist."
         description: 'The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of 10 seconds on node minikube.'
-        runbook_url: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh'
+        runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh'
 
 - interval: 1m
   input_series:
@@ -639,7 +639,7 @@ tests:
       exp_annotations:
         summary: "Node is not ready."
         description: 'minikube has been unready for more than 15 minutes.'
-        runbook_url: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodenotready'
+        runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodenotready'
 
 - interval: 1m
   input_series:
@@ -676,7 +676,7 @@ tests:
       exp_annotations:
         summary: "Node has as active Condition."
         description: 'minikube has active Condition MemoryPressure. This is caused by resource usage exceeding eviction thresholds.'
-        runbook_url: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodepressure'
+        runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodepressure'
 
 - interval: 1m
   input_series:
@@ -701,7 +701,7 @@ tests:
       exp_annotations:
         summary: "Node readiness status is flapping."
         description: 'The readiness status of node minikube has changed 9 times in the last 15 minutes.'
-        runbook_url: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodereadinessflapping'
+        runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodereadinessflapping'
 
 - interval: 1m
   input_series:
@@ -724,7 +724,7 @@ tests:
       exp_annotations:
         summary: "Node is evicting pods."
         description: 'Node minikube is evicting Pods due to memory.available.  Eviction occurs when eviction thresholds are crossed, typically caused by Pods exceeding RAM/ephemeral-storage limits.'
-        runbook_url: 'https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodeeviction'
+        runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodeeviction'
 
 # Verify that node:node_num_cpu:sum triggers no many-to-many errors.
 - interval: 1m
@@ -789,7 +789,7 @@ tests:
 
 - interval: 1m
   input_series:
-  # Failed pods must be ignored - see https://github.com/kubernetes-monitoring/kubernetes-mixin/pull/821
+  # Failed pods must be ignored - see https://github.com/kubernetes-sigs/kubernetes-mixin/pull/821
   - series: 'kube_pod_status_phase{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",phase="Failed",pod="failed-pods-must-be-ignored",service="ksm"}'
     values: '1+0x20'
   - series: 'kube_pod_owner{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",owner_is_controller="false",owner_kind="<None>",owner_name="failed-pods-example",pod="failed-pods-must-be-ignored",service="ksm"}'
@@ -800,7 +800,7 @@ tests:
     values: '1+0x20'
   - series: 'kube_pod_owner{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="ds-7cc77d965f",pod="pod-ds-7cc77d965f-cgsdv",service="ksm"}'
     values: '1+0x20'
-  # Pod in Running phase but Not Ready - see https://github.com/kubernetes-monitoring/kubernetes-mixin/pull/1239
+  # Pod in Running phase but Not Ready - see https://github.com/kubernetes-sigs/kubernetes-mixin/pull/1239
   - series: 'kube_pod_status_phase{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",phase="Running",pod="pod-running-but-not-ready",service="ksm"}'
     values: '1+0x20'
   - series: 'kube_pod_status_ready{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",pod="pod-running-but-not-ready",service="ksm",condition="true"}'
@@ -809,7 +809,7 @@ tests:
     values: '1+0x20'
   - series: 'kube_pod_owner{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",owner_is_controller="false",owner_kind="Deployment",owner_name="running-but-not-ready-example",pod="pod-running-but-not-ready",service="ksm"}'
     values: '1+0x20'
-  # Pod in Succeeded phase - should be ignored - see https://github.com/kubernetes-monitoring/kubernetes-mixin/issues/1260
+  # Pod in Succeeded phase - should be ignored - see https://github.com/kubernetes-sigs/kubernetes-mixin/issues/1260
   - series: 'kube_pod_status_phase{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",phase="Succeeded",pod="pod-succeeded-batch-job",service="ksm"}'
     values: '1+0x20'
   - series: 'kube_pod_status_ready{endpoint="https",instance="instance1",job="kube-state-metrics",cluster="kubernetes",namespace="ns1",pod="pod-succeeded-batch-job",service="ksm",condition="true"}'
@@ -848,7 +848,7 @@ tests:
       exp_annotations:
         summary: "Pod has been in a non-ready state for more than 15 minutes."
         description: "Pod ns1/pod-ds-7cc77d965f-cgsdv has been in a non-ready state for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
     - exp_labels:
         job: kube-state-metrics
         cluster: kubernetes
@@ -858,7 +858,7 @@ tests:
       exp_annotations:
         summary: "Pod has been in a non-ready state for more than 15 minutes."
         description: "Pod ns1/pod-running-but-not-ready has been in a non-ready state for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
 
 - interval: 1m
   input_series:
@@ -998,7 +998,7 @@ tests:
       exp_annotations:
         summary: "DaemonSet rollout is stuck."
         description: 'DaemonSet monitoring/node-exporter has not finished or progressed for at least 15m.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
   - eval_time: 35m
     alertname: KubeDaemonSetRolloutStuck
 # KubeDeploymentRolloutStuck
@@ -1023,7 +1023,7 @@ tests:
       exp_annotations:
         summary: 'Deployment rollout is not progressing.'
         description: 'Rollout of deployment monitoring/stuck is not progressing for longer than 15 minutes.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentrolloutstuck
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedeploymentrolloutstuck
   - eval_time: 18m
     alertname: KubeDeploymentRolloutStuck
 
@@ -1055,7 +1055,7 @@ tests:
       exp_annotations:
         summary: "DaemonSet rollout is stuck."
         description: 'DaemonSet monitoring/node-exporter has not finished or progressed for at least 15m.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
   - eval_time: 34m
     alertname: KubeDaemonSetRolloutStuck
 
@@ -1087,7 +1087,7 @@ tests:
       exp_annotations:
         summary: "DaemonSet rollout is stuck."
         description: 'DaemonSet monitoring/node-exporter has not finished or progressed for at least 15m.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
   - eval_time: 34m
     alertname: KubeDaemonSetRolloutStuck
 
@@ -1119,7 +1119,7 @@ tests:
       exp_annotations:
         summary: "DaemonSet rollout is stuck."
         description: 'DaemonSet monitoring/node-exporter has not finished or progressed for at least 15m.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
   - eval_time: 36m
     alertname: KubeDaemonSetRolloutStuck
 
@@ -1140,7 +1140,7 @@ tests:
       exp_annotations:
         summary: "Kubelet client certificate is about to expire."
         description: 'Client certificate for Kubelet on node minikube expires in 1d 0h 0m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
   - eval_time: 1m
     alertname: KubeletClientCertificateExpiration
     exp_alerts:
@@ -1153,7 +1153,7 @@ tests:
       exp_annotations:
         summary: "Kubelet client certificate is about to expire."
         description: 'Client certificate for Kubelet on node minikube expires in 23h 59m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
     - exp_labels:
         job: kubelet
         namespace: monitoring
@@ -1163,7 +1163,7 @@ tests:
       exp_annotations:
         summary: "Kubelet client certificate is about to expire."
         description: 'Client certificate for Kubelet on node minikube expires in 23h 59m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificateexpiration
 
 - interval: 1m
   input_series:
@@ -1182,7 +1182,7 @@ tests:
       exp_annotations:
         summary: "Kubelet server certificate is about to expire."
         description: 'Server certificate for Kubelet on node minikube expires in 1d 0h 0m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
   - eval_time: 1m
     alertname: KubeletServerCertificateExpiration
     exp_alerts:
@@ -1195,7 +1195,7 @@ tests:
       exp_annotations:
         summary: "Kubelet server certificate is about to expire."
         description: 'Server certificate for Kubelet on node minikube expires in 23h 59m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
     - exp_labels:
         job: kubelet
         namespace: monitoring
@@ -1205,7 +1205,7 @@ tests:
       exp_annotations:
         summary: "Kubelet server certificate is about to expire."
         description: 'Server certificate for Kubelet on node minikube expires in 23h 59m 0s.'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificateexpiration
 
 - interval: 1m
   input_series:
@@ -1224,7 +1224,7 @@ tests:
       exp_annotations:
         summary: "Kubelet has failed to renew its client certificate."
         description: 'Kubelet on node minikube has failed to renew its client certificate (5 errors in the last 5 minutes).'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificaterenewalerrors
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletclientcertificaterenewalerrors
 
 
 - interval: 1m
@@ -1244,7 +1244,7 @@ tests:
       exp_annotations:
         summary: "Kubelet has failed to renew its server certificate."
         description: 'Kubelet on node minikube has failed to renew its server certificate (5 errors in the last 5 minutes).'
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificaterenewalerrors
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletservercertificaterenewalerrors
 
 - interval: 1m
   input_series:
@@ -1265,7 +1265,7 @@ tests:
       exp_annotations:
         summary: "Job failed to complete."
         description: "Job ns1/job-1597623120 failed to complete. Removing failed job after investigation should clear this alert."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobfailed"
 
 - interval: 1m
   input_series:
@@ -1287,7 +1287,7 @@ tests:
       exp_annotations:
         summary: "Job did not complete in time"
         description: "Job ns1/job1 is taking more than 12h 0m 0s to complete."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobnotcompleted"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubejobnotcompleted"
 
 - interval: 1m
   input_series:
@@ -1332,7 +1332,7 @@ tests:
       exp_annotations:
         summary: "The kubernetes apiserver has terminated 33.33% of its incoming requests."
         description: "The kubernetes apiserver has terminated 33.33% of its incoming requests."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
 
 - interval: 1m
   input_series:
@@ -1354,7 +1354,7 @@ tests:
         reason: "CrashLoopBackOff"
       exp_annotations:
         description: 'Pod test/static-web (script) is in waiting state (reason: "CrashLoopBackOff").'
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodcrashlooping"
         summary: "Pod is crash looping."
   - eval_time: 20m
     alertname: KubePodCrashLooping
@@ -1399,7 +1399,7 @@ tests:
         severity: "warning"
       exp_annotations:
         description: 'Cluster has overcommitted CPU resource requests for Namespaces.'
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuquotaovercommit"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuquotaovercommit"
         summary: "Cluster has overcommitted CPU resource requests."
 
 # When ResourceQuota has both memory and requests.memory, min value of those will be taken into account for quota calculation.
@@ -1442,7 +1442,7 @@ tests:
         severity: "warning"
       exp_annotations:
         description: 'Cluster has overcommitted memory resource requests for Namespaces.'
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryquotaovercommit"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryquotaovercommit"
         summary: "Cluster has overcommitted memory resource requests."
 
 # Verify KubeStatefulSetReplicasMismatch fires, when no replicas could be created
@@ -1471,7 +1471,7 @@ tests:
         statefulset: "sts"
       exp_annotations:
         description: "StatefulSet test/sts has not matched the expected number of replicas for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch"
         summary: "StatefulSet has not matched the expected number of replicas."
 
 # Verify KubeStatefulSetReplicasMismatch fires, when replicas could be created but are not ready
@@ -1500,7 +1500,7 @@ tests:
         statefulset: "sts"
       exp_annotations:
         description: "StatefulSet test/sts has not matched the expected number of replicas for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetreplicasmismatch"
         summary: "StatefulSet has not matched the expected number of replicas."
 
 - name: KubeCPUOvercommit alert (single-node)
@@ -1524,7 +1524,7 @@ tests:
         severity: warning
       exp_annotations:
         description: Cluster has overcommitted CPU resource requests for Pods by 0.10 CPU shares and cannot tolerate node failure.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
         summary: Cluster has overcommitted CPU resource requests.
 
 - name: KubeCPUOvercommit alert (multi-node; non-HA)
@@ -1552,7 +1552,7 @@ tests:
         severity: warning
       exp_annotations:
         description: Cluster has overcommitted CPU resource requests for Pods by 0.20 CPU shares and cannot tolerate node failure.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
         summary: Cluster has overcommitted CPU resource requests.
 
 - name: KubeCPUOvercommit alert (multi-node; HA)
@@ -1584,7 +1584,7 @@ tests:
             severity: warning
           exp_annotations:
             description: Cluster has overcommitted CPU resource requests for Pods by 0.20 CPU shares and cannot tolerate node failure.
-            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
+            runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
             summary: Cluster has overcommitted CPU resource requests.
 
 - name: KubeMemoryOvercommit alert (single-node)
@@ -1608,7 +1608,7 @@ tests:
         severity: warning
       exp_annotations:
         description: Cluster has overcommitted memory resource requests for Pods by 1G bytes and cannot tolerate node failure.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
         summary: Cluster has overcommitted memory resource requests.
 
 - name: KubeMemoryOvercommit alert (multi-node; non-HA)
@@ -1636,7 +1636,7 @@ tests:
         severity: warning
       exp_annotations:
         description: Cluster has overcommitted memory resource requests for Pods by 2G bytes and cannot tolerate node failure.
-        runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
         summary: Cluster has overcommitted memory resource requests.
 
 - name: KubeMemoryOvercommit alert (multi-node; HA)
@@ -1668,5 +1668,5 @@ tests:
             severity: warning
           exp_annotations:
             description: Cluster has overcommitted memory resource requests for Pods by 2G bytes and cannot tolerate node failure.
-            runbook_url: https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
+            runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
             summary: Cluster has overcommitted memory resource requests.

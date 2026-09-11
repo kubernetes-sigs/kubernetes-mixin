@@ -29,9 +29,9 @@ Thank you for taking an interest in the project!
 
 * **Do not open up a GitHub issue if the bug is a security vulnerability**, and instead to refer to our [security policy](SECURITY.md).
 
-* **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/kubernetes-monitoring/kubernetes-mixin/issues).
+* **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/kubernetes-sigs/kubernetes-mixin/issues).
 
-* If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/kubernetes-monitoring/kubernetes-mixin/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **`jsonnet` snippet**, if applicable, as well as an optional **visual sample** demonstrating the expected behavior that is not occurring.
+* If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/kubernetes-sigs/kubernetes-mixin/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **`jsonnet` snippet**, if applicable, as well as an optional **visual sample** demonstrating the expected behavior that is not occurring.
 
 * Whenever possible, use the relevant bug report templates to create the issue.
 
@@ -58,7 +58,7 @@ Thank you for taking an interest in the project!
 
 ---
 
-`kubernetes-mixin` is a volunteer effort. We encourage you to pitch in and join [the team](https://github.com/kubernetes-monitoring/kubernetes-mixin/graphs/contributors)!
+`kubernetes-mixin` is a volunteer effort. We encourage you to pitch in and join [the team](https://github.com/kubernetes-sigs/kubernetes-mixin/graphs/contributors)!
 
 ---
 

@@ -34,7 +34,7 @@ tests:
       exp_annotations:
         description: "KubeAPI has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapidown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapidown"
 
 - interval: 1m
   name: KubeletDown fires when kubelet target is absent but nodes exist
@@ -57,7 +57,7 @@ tests:
       exp_annotations:
         description: "Kubelet has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletdown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletdown"
 
 - interval: 1m
   name: KubeletDown does not fire when kubelet is up
@@ -101,7 +101,7 @@ tests:
       exp_annotations:
         description: "Kubelet has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletdown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletdown"
 
 - interval: 1m
   name: KubeletDown does not fire when kubelet is up (single-cluster setup)
@@ -144,7 +144,7 @@ tests:
       exp_annotations:
         description: "KubeScheduler has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeschedulerdown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeschedulerdown"
 
 - interval: 1m
   name: KubeControllerManagerDown fires when kube-controller-manager target is absent
@@ -163,7 +163,7 @@ tests:
       exp_annotations:
         description: "KubeControllerManager has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontrollermanagerdown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontrollermanagerdown"
 
 - interval: 1m
   name: KubeProxyDown fires when kube-proxy target is absent
@@ -182,7 +182,7 @@ tests:
       exp_annotations:
         description: "KubeProxy has disappeared from Prometheus target discovery."
         summary: "Target disappeared from Prometheus target discovery."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeproxydown"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeproxydown"
 
 # InstanceUnreachable alerts - fire when scrape targets exist in service discovery but are failing (up == 0)
 
@@ -204,7 +204,7 @@ tests:
       exp_annotations:
         description: "A KubeAPI instance has been unreachable for more than 15 minutes."
         summary: "KubeAPI instance is unreachable."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiinstanceunreachable"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiinstanceunreachable"
 
 - interval: 1m
   name: KubeAPIInstanceUnreachable does not fire when kube-apiserver is up
@@ -234,7 +234,7 @@ tests:
       exp_annotations:
         description: "A Kubelet instance has been unreachable for more than 15 minutes."
         summary: "Kubelet instance is unreachable."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletinstanceunreachable"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletinstanceunreachable"
 
 - interval: 1m
   name: KubeletInstanceUnreachable does not fire when kubelet is up
@@ -264,7 +264,7 @@ tests:
       exp_annotations:
         description: "A KubeScheduler instance has been unreachable for more than 15 minutes."
         summary: "KubeScheduler instance is unreachable."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeschedulerinstanceunreachable"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeschedulerinstanceunreachable"
 
 - interval: 1m
   name: KubeSchedulerInstanceUnreachable does not fire when kube-scheduler is up
@@ -294,7 +294,7 @@ tests:
       exp_annotations:
         description: "A KubeControllerManager instance has been unreachable for more than 15 minutes."
         summary: "KubeControllerManager instance is unreachable."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontrollermanagerinstanceunreachable"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontrollermanagerinstanceunreachable"
 
 - interval: 1m
   name: KubeControllerManagerInstanceUnreachable does not fire when kube-controller-manager is up
@@ -324,7 +324,7 @@ tests:
       exp_annotations:
         description: "A KubeProxy instance has been unreachable for more than 15 minutes."
         summary: "KubeProxy instance is unreachable."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeproxyinstanceunreachable"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeproxyinstanceunreachable"
 
 - interval: 1m
   name: KubeProxyInstanceUnreachable does not fire when kube-proxy is up

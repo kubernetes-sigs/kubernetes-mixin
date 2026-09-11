@@ -38,7 +38,7 @@ tests:
         job: "kube-state-metrics"
       exp_annotations:
         description: "PDB ns1/pdb1 expects 1 more healthy pods. The desired number of healthy pods has not been met for at least 15m."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepdbnotenoughhealthypods"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepdbnotenoughhealthypods"
         summary: "PDB does not have enough healthy pods."
 
 - interval: 1m
@@ -66,7 +66,7 @@ tests:
         statefulset: "ss1"
       exp_annotations:
         description: "StatefulSet ns1/ss1 update has not been rolled out."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetupdatenotrolledout"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubestatefulsetupdatenotrolledout"
         summary: "StatefulSet update has not been rolled out."
 
 - interval: 1m
@@ -92,7 +92,7 @@ tests:
         job: "kube-state-metrics"
       exp_annotations:
         description: "HPA ns1/hpa1 has been running at max replicas for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpamaxedout"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpamaxedout"
         summary: "HPA is running at max replicas"
 
 - interval: 1m
@@ -140,5 +140,5 @@ tests:
         job: "kube-state-metrics"
       exp_annotations:
         description: "HPA ns1/hpa1 has been running at max replicas for longer than 15 minutes."
-        runbook_url: "https://github.com/kubernetes-monitoring/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpamaxedout"
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpamaxedout"
         summary: "HPA is running at max replicas"

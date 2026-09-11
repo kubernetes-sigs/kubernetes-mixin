@@ -67,6 +67,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
-          repository: kubernetes-monitoring/kubernetes-mixin
+          repository: kubernetes-sigs/kubernetes-mixin
           generate_release_notes: true
           files: kubernetes-mixin-${{ github.ref_name }}.zip
