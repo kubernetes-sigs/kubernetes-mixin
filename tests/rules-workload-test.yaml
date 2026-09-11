@@ -1,0 +1,176 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../prometheus_rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # Prefer the controller owner when a pod has multiple owner references
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="agent-abc",owner_is_controller="true",owner_kind="DaemonSet",owner_name="agent",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="agent-abc",owner_is_controller="false",owner_kind="ConfigMap",owner_name="agent-config",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="agent-abc",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="agent",workload_type="daemonset"}'
+        value: 1
+
+  # Deduplicate standalone ReplicaSet metrics from redundant KSM instances.
+  - interval: 1m
+    input_series:
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="standalone-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="standalone-rs",job="kube-state-metrics",instance="ksm-2"}'
+      values: '2 2'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="standalone-rs",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="standalone-rs",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_workload:relabel
+      exp_samples:
+      - labels: 'namespace_workload:kube_workload:relabel{cluster="test",namespace="default",workload="standalone-rs",workload_type="replicaset"}'
+        value: 1
+
+  # Record desired pods for every supported workload type.
+  - interval: 1m
+    input_series:
+    - series: 'kube_daemonset_status_desired_number_scheduled{cluster="test",namespace="default",daemonset="agent",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="api",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="migrate",owner_kind="",owner_name="",owner_is_controller="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_spec_completions{cluster="test",namespace="default",job_name="migrate",job="kube-state-metrics",instance="ksm-1"}'
+      values: '4 4'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="standalone-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '5 5'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="standalone-rs",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_statefulset_replicas{cluster="test",namespace="default",statefulset="database",job="kube-state-metrics",instance="ksm-1"}'
+      values: '6 6'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="agent",workload_type="daemonset"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="api",workload_type="deployment"}'
+        value: 3
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="migrate",workload_type="job"}'
+        value: 4
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="standalone-rs",workload_type="replicaset"}'
+        value: 5
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="database",workload_type="statefulset"}'
+        value: 6
+
+  # Do not record a Deployment-owned ReplicaSet as a standalone workload.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="api",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="api-7cc77d965f",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="api-7cc77d965f",owner_kind="Deployment",owner_name="api",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="api",workload_type="deployment"}'
+        value: 3
+
+  # Keep scaled-to-zero workloads in the desired pod output.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="disabled-api",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="disabled-api",workload_type="deployment"}'
+        value: 0
+
+  # Keep desired counts isolated for multiple workloads in one namespace.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="api",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="worker",job="kube-state-metrics",instance="ksm-1"}'
+      values: '7 7'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="api",workload_type="deployment"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="worker",workload_type="deployment"}'
+        value: 7
+
+  # Keep a Job with only a non-controller owner as a standalone Job workload.
+  - interval: 1m
+    input_series:
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="worker",owner_kind="Pod",owner_name="launcher",owner_is_controller="false",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_spec_completions{cluster="test",namespace="default",job_name="worker",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_workload:relabel
+      exp_samples:
+      - labels: 'namespace_workload:kube_workload:relabel{cluster="test",namespace="default",workload="worker",workload_type="job"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="worker",workload_type="job"}'
+        value: 3
+
+  # Keep a Job with a controller Pod owner as a Job workload.
+  - interval: 1m
+    input_series:
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="worker",owner_kind="Pod",owner_name="launcher",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_spec_completions{cluster="test",namespace="default",job_name="worker",job="kube-state-metrics",instance="ksm-1"}'
+      values: '4 4'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_workload:relabel
+      exp_samples:
+      - labels: 'namespace_workload:kube_workload:relabel{cluster="test",namespace="default",workload="worker",workload_type="job"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="worker",workload_type="job"}'
+        value: 4
