@@ -400,6 +400,9 @@ local utils = import '../lib/utils.libsonnet';
                 kube_poddisruptionbudget_status_current_healthy{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
               )
               > 0
+              and
+              kube_poddisruptionbudget_status_expected_pods{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+              > 0
             ||| % $._config,
             labels: {
               severity: 'warning',
