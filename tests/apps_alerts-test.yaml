@@ -70,7 +70,7 @@ tests:
         summary: "StatefulSet update has not been rolled out."
 
 - interval: 1m
-  name: KubeHpaMaxedOut fires when current replicas hit max and min is not equal to max
+  name: KubeHpaMaxedOut fires when current replicas hit max, min is not equal to max, and ScalingLimited=true
   input_series:
   - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
     values: '10x15'
@@ -78,6 +78,8 @@ tests:
     values: '10x15'
   - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
     values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_status_condition{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1", condition="ScalingLimited", status="true"}'
+    values: '1x15'
   alert_rule_test:
   - eval_time: 14m
     alertname: KubeHpaMaxedOut
@@ -96,7 +98,7 @@ tests:
         summary: "HPA is running at max replicas"
 
 - interval: 1m
-  name: KubeHpaMaxedOut does not fire when HPA is intentionally pinned to a fixed scale (min == max)
+  name: KubeHpaMaxedOut does not fire when HPA is intentionally pinned to a fixed scale (min == max), even if ScalingLimited=true
   input_series:
   - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
     values: '5x15'
@@ -104,34 +106,55 @@ tests:
     values: '5x15'
   - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
     values: '5x15'
+  - series: 'kube_horizontalpodautoscaler_status_condition{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2", condition="ScalingLimited", status="true"}'
+    values: '1x15'
   alert_rule_test:
   - eval_time: 15m
     alertname: KubeHpaMaxedOut
 
 - interval: 1m
-  name: KubeHpaMaxedOut does not fire for pinned HPA (min == max) on cluster2 when non-pinned same-named HPA exists on cluster1
+  name: KubeHpaMaxedOut does not fire when current == max and min != max but ScalingLimited=false (DesiredWithinRange)
   input_series:
-  # cluster1 - HPA at max, min != max -> should fire
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '10x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '10x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_status_condition{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3", condition="ScalingLimited", status="true"}'
+    values: '0x15'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: KubeHpaMaxedOut
+
+- interval: 1m
+  name: KubeHpaMaxedOut only fires for the cluster where ScalingLimited=true when the same HPA name exists in multiple clusters
+  input_series:
+  # cluster1 - HPA at max, min != max, ScalingLimited=true -> should fire
   - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
     values: '10x15'
   - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
     values: '10x15'
   - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
     values: '2x15'
-  # cluster2 - same namespace/hpa name, but pinned (min == max) -> should NOT fire
+  - series: 'kube_horizontalpodautoscaler_status_condition{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1", condition="ScalingLimited", status="true"}'
+    values: '1x15'
+  # cluster2 - same namespace/hpa name, also at max with min != max, but ScalingLimited=false -> should NOT fire
   - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster2", namespace="ns1", horizontalpodautoscaler="hpa1"}'
-    values: '5x15'
+    values: '10x15'
   - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster2", namespace="ns1", horizontalpodautoscaler="hpa1"}'
-    values: '5x15'
+    values: '10x15'
   - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster2", namespace="ns1", horizontalpodautoscaler="hpa1"}'
-    values: '5x15'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_status_condition{job="kube-state-metrics", cluster="cluster2", namespace="ns1", horizontalpodautoscaler="hpa1", condition="ScalingLimited", status="true"}'
+    values: '0x15'
   alert_rule_test:
   - eval_time: 14m
     alertname: KubeHpaMaxedOut
   - eval_time: 15m
     alertname: KubeHpaMaxedOut
     exp_alerts:
-    # Only cluster1 should fire; cluster2 is pinned (min == max) and must not fire
+    # Only cluster1 should fire; cluster2 has ScalingLimited=false and must not fire
     - exp_labels:
         severity: "warning"
         cluster: "cluster1"
