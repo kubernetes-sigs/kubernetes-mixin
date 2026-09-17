@@ -178,6 +178,54 @@ local timeSeries = g.panel.timeSeries;
           },
         ]),
 
+        tsPanel.new('CPU Throttling')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new(
+            '${datasource}',
+            queries.cpuThrottling($._config)
+          )
+          + prometheus.withLegendFormat('__auto'),
+        ])
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMin(0)
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMax(1)
+        + tsPanel.fieldConfig.defaults.custom.thresholdsStyle.withMode('dashed+area')
+        + tsPanel.fieldConfig.defaults.custom.withAxisColorMode('thresholds')
+        + tsPanel.standardOptions.withOverrides([
+          {
+            matcher: {
+              id: 'byFrameRefID',
+              options: 'A',
+            },
+            properties: [
+              {
+                id: 'thresholds',
+                value: {
+                  mode: 'absolute',
+                  steps: [
+                    {
+                      color: 'green',
+                      value: null,
+                    },
+                    {
+                      color: 'red',
+                      value: $._config.cpuThrottlingPercent / 100,
+                    },
+                  ],
+                },
+              },
+              {
+                id: 'color',
+                value: {
+                  mode: 'thresholds',
+                  seriesBy: 'lastNotNull',
+                },
+              },
+            ],
+          },
+        ]),
+
         table.new('CPU Quota')
         + table.gridPos.withW(24)
         + table.queryOptions.withTargets([
@@ -194,6 +242,12 @@ local timeSeries = g.panel.timeSeries;
           + prometheus.withInstant(true)
           + prometheus.withFormat('table'),
           prometheus.new('${datasource}', queries.cpuUsageVsLimits($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', queries.cpuThrottling($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', queries.cpuThrottledSeconds($._config))
           + prometheus.withInstant(true)
           + prometheus.withFormat('table'),
         ])
@@ -213,6 +267,8 @@ local timeSeries = g.panel.timeSeries;
               'Time 3': true,
               'Time 4': true,
               'Time 5': true,
+              'Time 6': true,
+              'Time 7': true,
             },
             indexByName: {
               'Time 1': 0,
@@ -220,12 +276,16 @@ local timeSeries = g.panel.timeSeries;
               'Time 3': 2,
               'Time 4': 3,
               'Time 5': 4,
-              pod: 5,
-              'Value #A': 6,
-              'Value #B': 7,
-              'Value #C': 8,
-              'Value #D': 9,
-              'Value #E': 10,
+              'Time 6': 5,
+              'Time 7': 6,
+              pod: 7,
+              'Value #A': 8,
+              'Value #B': 9,
+              'Value #C': 10,
+              'Value #D': 11,
+              'Value #E': 12,
+              'Value #F': 13,
+              'Value #G': 14,
             },
             renameByName: {
               pod: 'Pod',
@@ -234,6 +294,8 @@ local timeSeries = g.panel.timeSeries;
               'Value #C': 'CPU Requests %',
               'Value #D': 'CPU Limits',
               'Value #E': 'CPU Limits %',
+              'Value #F': 'CPU Throttling %',
+              'Value #G': 'CPU Throttled Seconds',
             },
           }),
         ])
@@ -248,6 +310,18 @@ local timeSeries = g.panel.timeSeries;
               {
                 id: 'unit',
                 value: 'percentunit',
+              },
+            ],
+          },
+          {
+            matcher: {
+              id: 'byName',
+              options: 'CPU Throttled Seconds',
+            },
+            properties: [
+              {
+                id: 'unit',
+                value: 's',
               },
             ],
           },
