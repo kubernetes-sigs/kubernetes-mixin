@@ -56,7 +56,32 @@ make dev-down
 
 ## Releases
 
-> Note: Releases up until `release-0.12` are changes in their own branches. Changelogs are included in releases starting from [version-0.13.0](https://github.com/kubernetes-sigs/kubernetes-mixin/releases/tag/version-0.13.0).
+Releases use `version-MAJOR.MINOR.PATCH` tags. See the [releases](https://github.com/kubernetes-sigs/kubernetes-mixin/releases) for changelogs and generated dashboards, alerts, and recording rules. Changelogs start with `version-0.13.0`. The `version-0.12.0` and `version-0.13.0` tags mark snapshots of the legacy `release-0.12` and `release-0.13` branches. The `master` branch contains development changes between releases.
+
+### Kubernetes compatibility
+
+Mixin versions do not map one-to-one to Kubernetes versions. Compatibility depends on the metrics and labels exposed by Kubernetes and exporters such as kube-state-metrics, node-exporter, and windows-exporter, as well as which metrics your monitoring stack collects.
+
+The tables below document known metric requirements and historical compatibility guidance. They do not guarantee that every dashboard and rule works with every later Kubernetes version. The [CI workflow](.github/workflows/ci.yaml) checks generation, formatting, linting, and rule tests; it does not test a matrix of Kubernetes versions.
+
+#### Tagged releases and master
+
+| Mixin reference                          | API-server SLI metrics | Scheduler metrics                           |
+|------------------------------------------|------------------------|---------------------------------------------|
+| `version-0.13.0` through `version-1.2.0` | Kubernetes v1.26+      | Removed e2e and binding metrics (see below) |
+| `version-1.3.0` and `version-1.3.1`      | Kubernetes v1.26+      | Removed binding metric (see below)          |
+| `version-1.4.0` through `version-1.5.6`  | Kubernetes v1.26+      | Kubernetes v1.29+                           |
+| `master`                                 | Kubernetes v1.26+      | Kubernetes v1.29+                           |
+
+- The API-server rules use `apiserver_request_sli_duration_seconds`, which [Kubernetes introduced in v1.26](https://github.com/kubernetes/kubernetes/pull/112679). The mixin adopted it in [#874](https://github.com/kubernetes-sigs/kubernetes-mixin/pull/874), before `version-0.13.0`.
+- Older scheduler rules and dashboards use `scheduler_e2e_scheduling_duration_seconds` and `scheduler_binding_duration_seconds`, which Kubernetes removed. In `version-1.3.0`, [#1111](https://github.com/kubernetes-sigs/kubernetes-mixin/pull/1111) replaced the e2e metric with `scheduler_scheduling_attempt_duration_seconds`. Releases before `version-1.4.0` still use the removed binding metric and can have missing scheduler data even when the API-server metric requirement is met.
+- In `version-1.4.0`, [#1140](https://github.com/kubernetes-sigs/kubernetes-mixin/pull/1140) replaced the binding metric with `scheduler_pod_scheduling_sli_duration_seconds`, which [Kubernetes introduced in v1.29](https://github.com/kubernetes/kubernetes/pull/119049).
+
+Pin a release tag and review its changelog when upgrading. Check that your monitoring stack collects the metrics and labels used by the dashboards and rules you deploy. Kubernetes version alone does not establish compatibility with your exporter versions or scrape configuration. Automated metric compatibility checks are tracked in [#1249](https://github.com/kubernetes-sigs/kubernetes-mixin/issues/1249).
+
+#### Legacy release branches
+
+The following guidance applies to the older release branches, including the `version-0.12.0` tag. For the `release-0.13` snapshot tagged as `version-0.13.0`, use the metric requirements above.
 
 | Release branch | Kubernetes Compatibility | Prometheus Compatibility | Kube-state-metrics Compatibility |
 |----------------|--------------------------|--------------------------|----------------------------------|
@@ -72,14 +97,12 @@ make dev-down
 | release-0.10   | v1.20+                   | v2.11.0+                 | v2.0+                            |
 | release-0.11   | v1.23+                   | v2.11.0+                 | v2.0+                            |
 | release-0.12   | v1.23+                   | v2.11.0+                 | v2.0+                            |
-| release-0.13   | v1.23+                   | v2.11.0+                 | v2.0+                            |
-| master         | v1.26+                   | v2.11.0+                 | v2.0+                            |
 
 In Kubernetes 1.14 there was a major [metrics overhaul](https://github.com/kubernetes/enhancements/issues/1206) implemented. Therefore v0.1.x of this repository is the last release to support Kubernetes 1.13 and previous version on a best effort basis.
 
 Some alerts now use Prometheus filters made available in Prometheus 2.11.0, which makes this version of Prometheus a dependency.
 
-Warning: This compatibility matrix was initially created based on experience, we do not guarantee the compatibility, it may be updated based on new learnings.
+This historical matrix is based on experience and may change as compatibility issues are reported.
 
 Warning: By default the expressions will generate *grafana 7.2+* compatible rules using the *$\_\_rate_interval* variable for rate functions. If you need backward compatible rules please set *grafana72: false* in your *\_config*
 
@@ -93,7 +116,9 @@ Maintainers can trigger the [release workflow](.github/workflows/release.yaml) b
    git checkout master
    ```
 
-2. Create a tag following sem-ver versioning for the version and trigger release.
+2. Review the Kubernetes compatibility guidance above for metric changes in the new release. Update the release ranges and document any new requirements or removed metrics.
+
+3. Create a tag following sem-ver versioning for the version and trigger release.
 
    ```bash
    # replace MAJOR.MINOR.PATCH with e.g. 1.2.3
