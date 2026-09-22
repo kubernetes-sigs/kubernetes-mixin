@@ -167,6 +167,18 @@ local timeSeries = g.panel.timeSeries;
           },
         ]),
 
+        tsPanel.new('Threads')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('short')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new(
+            '${datasource}',
+            queries.threads($._config)
+          )
+          + prometheus.withLegendFormat('__auto'),
+        ])
+        + tsPanel.fieldConfig.defaults.custom.withAxisSoftMin(0),
+
         table.new('CPU Quota')
         + table.gridPos.withW(24)
         + table.queryOptions.withTargets([
