@@ -29,7 +29,13 @@ local utils = import '../lib/utils.libsonnet';
     groups+: [
       {
         name: 'kubernetes-apps',
-        rules: [utils.wrap_rule_for_labels(rule, $._config) for rule in self.rules_],
+        rules: [
+          utils.wrap_rule_for_annotations(
+            utils.wrap_rule_for_labels(rule, $._config),
+            $._config,
+          )
+          for rule in self.rules_
+        ],
         rules_:: [
           {
             expr: |||

@@ -60,4 +60,24 @@ assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_events:rate500ms');
 assert averagedRecords(exoticRules) == std.set(['apiserver_request:burnrate2w']);
 
+// Join labels/annotations onto apps alerts via group_left when configured.
+local withJoins = mixin {
+  _config+:: {
+    common_join_labels: ['team'],
+    common_join_annotations: ['service_name'],
+  },
+};
+local appsRules = groupRules(withJoins.prometheusAlerts.groups, 'kubernetes-apps');
+local alertExpr(name) =
+  local matching = [rule.expr for rule in appsRules if std.objectHas(rule, 'alert') && rule.alert == name];
+  if std.length(matching) == 0 then error 'no alert named %s' % name else matching[0];
+
+local podExpr = alertExpr('KubePodCrashLooping');
+assert std.length(std.findSubstr('group_left(team) kube_pod_labels', podExpr)) > 0;
+assert std.length(std.findSubstr('group_left(service_name) kube_pod_annotations', podExpr)) > 0;
+
+local deployExpr = alertExpr('KubeDeploymentReplicasMismatch');
+assert std.length(std.findSubstr('group_left(team) kube_deployment_labels', deployExpr)) > 0;
+assert std.length(std.findSubstr('group_left(service_name) kube_deployment_annotations', deployExpr)) > 0;
+
 true
