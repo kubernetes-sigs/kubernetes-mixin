@@ -185,6 +185,12 @@ local timeSeries = g.panel.timeSeries;
           prometheus.new('${datasource}', queries.cpuUsageVsLimits($._config))
           + prometheus.withInstant(true)
           + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', queries.cpuThrottling($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
+          prometheus.new('${datasource}', queries.cpuThrottledSeconds($._config))
+          + prometheus.withInstant(true)
+          + prometheus.withFormat('table'),
         ])
         + table.queryOptions.withTransformations([
           table.queryOptions.transformation.withId('joinByField')
@@ -202,6 +208,8 @@ local timeSeries = g.panel.timeSeries;
               'Time 3': true,
               'Time 4': true,
               'Time 5': true,
+              'Time 6': true,
+              'Time 7': true,
             },
             indexByName: {
               'Time 1': 0,
@@ -209,12 +217,16 @@ local timeSeries = g.panel.timeSeries;
               'Time 3': 2,
               'Time 4': 3,
               'Time 5': 4,
-              container: 5,
-              'Value #A': 6,
-              'Value #B': 7,
-              'Value #C': 8,
-              'Value #D': 9,
-              'Value #E': 10,
+              'Time 6': 5,
+              'Time 7': 6,
+              container: 7,
+              'Value #A': 8,
+              'Value #B': 9,
+              'Value #C': 10,
+              'Value #D': 11,
+              'Value #E': 12,
+              'Value #F': 13,
+              'Value #G': 14,
             },
             renameByName: {
               container: 'Container',
@@ -223,6 +235,8 @@ local timeSeries = g.panel.timeSeries;
               'Value #C': 'CPU Requests %',
               'Value #D': 'CPU Limits',
               'Value #E': 'CPU Limits %',
+              'Value #F': 'CPU Throttling %',
+              'Value #G': 'CPU Throttled Seconds',
             },
           }),
         ])
@@ -237,6 +251,18 @@ local timeSeries = g.panel.timeSeries;
               {
                 id: 'unit',
                 value: 'percentunit',
+              },
+            ],
+          },
+          {
+            matcher: {
+              id: 'byName',
+              options: 'CPU Throttled Seconds',
+            },
+            properties: [
+              {
+                id: 'unit',
+                value: 's',
               },
             ],
           },
