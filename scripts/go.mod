@@ -224,7 +224,7 @@ require (
 	github.com/stackitcloud/stackit-sdk-go/core v0.26.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tomwright/dasel/v2 v2.8.1 // indirect
-	github.com/tomwright/dasel/v3 v3.10.1 // indirect
+	github.com/tomwright/dasel/v3 v3.11.2 // indirect
 	github.com/urfave/cli/v3 v3.10.1 // indirect
 	github.com/vultr/govultr/v3 v3.32.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
