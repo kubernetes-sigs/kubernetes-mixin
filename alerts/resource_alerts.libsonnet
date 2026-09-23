@@ -16,6 +16,15 @@
 local utils = import '../lib/utils.libsonnet';
 
 {
+  // Appends a namespace breakdown to a description, via the Go template
+  // `query` function. Escapes embedded PromQL double quotes so the query
+  // stays a single valid argument to `query` once rendered.
+  local namespaceListAnnotation(heading, query) =
+    '\n%s:\n{{- range query "%s" }}\n- {{ .Labels.namespace }}\n{{- end }}' % [
+      heading,
+      std.strReplace(query, '"', '\\"'),
+    ],
+
   local kubeOvercommitExpression(resource) = if $._config.showMultiCluster then
     |||
       # Non-HA clusters.
@@ -71,6 +80,12 @@ local utils = import '../lib/utils.libsonnet';
       )
     ||| % $._config { resource: resource },
 
+  local kubeOvercommitNamespaceList(resource) =
+    namespaceListAnnotation(
+      'Namespaces by %s requests' % resource,
+      'sum by (namespace) (namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})' % $._config { resource: resource },
+    ),
+
   local kubeQuotaOvercommitExpression(resource) = if $._config.showMultiCluster then
     |||
       sum by(%(clusterLabel)s) (
@@ -91,6 +106,12 @@ local utils = import '../lib/utils.libsonnet';
         kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s}
       ) > %(namespaceOvercommitFactor)s
     ||| % $._config { resource: resource },
+
+  local kubeQuotaOvercommitNamespaceList(resource) =
+    namespaceListAnnotation(
+      'Namespaces with a %s requests quota' % resource,
+      'sum by (namespace) (min without (resource) (kube_resourcequota{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, type="hard", resource=~"(%(resource)s|requests.%(resource)s)"}))' % $._config { resource: resource },
+    ),
 
   _config+:: {
     kubeStateMetricsSelector: error 'must provide selector for kube-state-metrics',
@@ -122,8 +143,9 @@ local utils = import '../lib/utils.libsonnet';
             },
             annotations: {
               summary: 'Cluster has overcommitted CPU resource requests.',
-              description: 'Cluster%s has overcommitted CPU resource requests for Pods by {{ printf "%%.2f" $value }} CPU shares and cannot tolerate node failure.' % [
+              description: 'Cluster%s has overcommitted CPU resource requests for Pods by {{ printf "%%.2f" $value }} CPU shares and cannot tolerate node failure.%s' % [
                 utils.ifShowMultiCluster($._config, ' {{ $labels.%(clusterLabel)s }}' % $._config),
+                kubeOvercommitNamespaceList('cpu'),
               ],
             },
             'for': '10m',
@@ -136,8 +158,9 @@ local utils = import '../lib/utils.libsonnet';
             },
             annotations: {
               summary: 'Cluster has overcommitted memory resource requests.',
-              description: 'Cluster%s has overcommitted memory resource requests for Pods by {{ $value | humanize }} bytes and cannot tolerate node failure.' % [
+              description: 'Cluster%s has overcommitted memory resource requests for Pods by {{ $value | humanize }} bytes and cannot tolerate node failure.%s' % [
                 utils.ifShowMultiCluster($._config, ' {{ $labels.%(clusterLabel)s }}' % $._config),
+                kubeOvercommitNamespaceList('memory'),
               ],
             },
             'for': '10m',
@@ -150,8 +173,9 @@ local utils = import '../lib/utils.libsonnet';
             },
             annotations: {
               summary: 'Cluster has overcommitted CPU resource requests.',
-              description: 'Cluster%s has overcommitted CPU resource requests for Namespaces.' % [
+              description: 'Cluster%s has overcommitted CPU resource requests for Namespaces.%s' % [
                 utils.ifShowMultiCluster($._config, ' {{ $labels.%(clusterLabel)s }}' % $._config),
+                kubeQuotaOvercommitNamespaceList('cpu'),
               ],
             },
             expr: kubeQuotaOvercommitExpression('cpu'),
@@ -164,8 +188,9 @@ local utils = import '../lib/utils.libsonnet';
             },
             annotations: {
               summary: 'Cluster has overcommitted memory resource requests.',
-              description: 'Cluster%s has overcommitted memory resource requests for Namespaces.' % [
+              description: 'Cluster%s has overcommitted memory resource requests for Namespaces.%s' % [
                 utils.ifShowMultiCluster($._config, ' {{ $labels.%(clusterLabel)s }}' % $._config),
+                kubeQuotaOvercommitNamespaceList('memory'),
               ],
             },
             expr: kubeQuotaOvercommitExpression('memory'),
