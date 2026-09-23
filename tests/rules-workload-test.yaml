@@ -1,0 +1,684 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../prometheus_rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # Prefer the controller owner when a pod has multiple owner references
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="controller-reference-daemonset-pod",owner_is_controller="true",owner_kind="DaemonSet",owner_name="controller-reference-daemonset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="controller-reference-daemonset-pod",owner_is_controller="false",owner_kind="ConfigMap",owner_name="non-controller-config-reference",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="controller-reference-daemonset-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="controller-reference-daemonset-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="controller-reference-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+
+  # Record ready pods for each built-in workload ownership path.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deployment-pod-a",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="deployment-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deployment-pod-a",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="deployment-rs",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deployment-pod-a",owner_is_controller="false",owner_kind="ConfigMap",owner_name="non-controller-config-reference",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="deployment",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="deployment",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deployment-rs",owner_is_controller="false",owner_kind="Rollout",owner_name="non-controller-rollout-reference",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="deployment-pod-a",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="deployment-pod-a",condition="true",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="deployment-pod-a",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deployment-pod-b",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="deployment-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="deployment-pod-b",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="standalone-replicaset-pod",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="standalone-replicaset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="standalone-replicaset",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="standalone-replicaset-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="standalone-replicaset-pod",phase="Pending",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="statefulset-pod",owner_is_controller="true",owner_kind="StatefulSet",owner_name="statefulset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="statefulset-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="statefulset-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="standalone-job-pod",owner_is_controller="true",owner_kind="Job",owner_name="standalone-job",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="standalone-job",owner_kind="",owner_name="",owner_is_controller="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="standalone-job-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="standalone-job-pod",phase="Succeeded",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="pod-owned-job-pod",owner_is_controller="true",owner_kind="Job",owner_name="pod-owned-job-child-a",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="pod-owned-job-child-a",owner_kind="Pod",owner_name="pod-owned-job",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="pod-owned-job-child-a",owner_kind="Pod",owner_name="pod-owned-job",owner_is_controller="true",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="pod-owned-job-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="pod-owned-job-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="pod-owned-job",workload_type="pod",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="standalone-job",workload_type="job",workload_is_controller="true"}'
+        value: 1
+
+  # Record ready pods for custom controllers and Jobs without a controller owner.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="custom-pod-controller-pod",owner_is_controller="true",owner_kind="StrimziPodSet",owner_name="custom-pod-controller",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="custom-pod-controller-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="custom-pod-controller-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="custom-job-controller-pod-a",owner_is_controller="true",owner_kind="Job",owner_name="custom-job-controller-job-a",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="custom-job-controller-job-a",owner_kind="CronJob",owner_name="custom-job-controller",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="custom-job-controller-pod-a",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="custom-job-controller-pod-a",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="job-with-non-controller-owner-pod",owner_is_controller="true",owner_kind="Job",owner_name="job-with-non-controller-owner",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="job-with-non-controller-owner",owner_kind="Pod",owner_name="non-controller-pod-owner",owner_is_controller="false",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="job-with-non-controller-owner-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="job-with-non-controller-owner-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-a",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="custom-replicaset-controller-rs-a",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="custom-replicaset-controller-rs-a",owner_kind="Rollout",owner_name="custom-replicaset-controller",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-a",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-a",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="custom-replicaset-controller-rs-a",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="custom-job-controller-pod-b",owner_is_controller="true",owner_kind="Job",owner_name="custom-job-controller-job-b",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_job_owner{cluster="test",namespace="default",job_name="custom-job-controller-job-b",owner_kind="CronJob",owner_name="custom-job-controller",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="custom-job-controller-pod-b",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="custom-job-controller-pod-b",phase="Succeeded",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-b",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="custom-replicaset-controller-rs-b",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="custom-replicaset-controller-rs-b",owner_kind="Rollout",owner_name="custom-replicaset-controller",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-b",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="custom-replicaset-controller-pod-b",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="custom-replicaset-controller-rs-b",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-pod-controller",workload_type="StrimziPodSet",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="custom-replicaset-controller",workload_type="Rollout",workload_is_controller="true"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="job-with-non-controller-owner",workload_type="job",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="custom-job-controller",workload_type="CronJob",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum{workload=~"custom-replicaset-controller.*"}
+
+  # Preserve bare and static pod workloads without accepting non-controller owners.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="bare-pod",owner_is_controller="",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="bare-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="bare-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="kube-system",pod="static-pod",owner_is_controller="true",owner_kind="Node",owner_name="node-1",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="kube-system",pod="static-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="kube-system",pod="static-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="referenced-pod",owner_is_controller="false",owner_kind="ConfigMap",owner_name="pod-config",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="referenced-pod",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="kube-system",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="bare-pod",workload_type="barepod",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="kube-system",phase="Running",workload="static-pod",workload_type="staticpod",workload_is_controller="true"}'
+        value: 1
+
+  # Aggregate all pod phases without double-counting redundant KSM producers.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="lifecycle-deployment-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="lifecycle-deployment-rs",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",owner_is_controller="false",owner_kind="ConfigMap",owner_name="non-controller-config-reference",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="lifecycle-deployment-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="lifecycle-deployment-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="lifecycle-deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="lifecycle-deployment",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="lifecycle-deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="lifecycle-deployment",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Pending",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 1 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Succeeded",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Failed",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Unknown",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Pending",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Running",job="kube-state-metrics",instance="ksm-2"}'
+      values: '0 1 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Succeeded",job="kube-state-metrics",instance="ksm-2"}'
+      values: '0 0 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Failed",job="kube-state-metrics",instance="ksm-2"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",phase="Unknown",job="kube-state-metrics",instance="ksm-2"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",phase="Pending",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",phase="Succeeded",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",phase="Failed",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",phase="Unknown",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",phase="Pending",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",phase="Succeeded",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",phase="Failed",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 0 0'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",phase="Unknown",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="non-controller-only",owner_is_controller="false",owner_kind="DaemonSet",owner_name="ignored",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="default",pod="non-controller-only",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 1 0'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="lifecycle-deployment-pod-a",condition="true",job="kube-state-metrics",instance="ksm-2"}'
+      values: '0 1 0'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="lifecycle-deployment-pod-b",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="default",pod="lifecycle-deployment-pod-c",condition="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 0 0'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="lifecycle-deployment",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3 3'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="lifecycle-deployment",job="kube-state-metrics",instance="ksm-2"}'
+      values: '3 3 3'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 0m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 2
+    - eval_time: 2m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="lifecycle-deployment",workload_type="deployment"}'
+        value: 3
+    - eval_time: 0m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 2m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Failed",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Pending",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Running",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Succeeded",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="default",phase="Unknown",workload="lifecycle-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+
+  # Keep conflicting controller kinds evaluable as independent workload series.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="conflict",pod="conflicting-controller-pod",owner_is_controller="true",owner_kind="DaemonSet",owner_name="conflicting-controller-daemonset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="conflict",pod="conflicting-controller-pod",owner_is_controller="true",owner_kind="StatefulSet",owner_name="conflicting-controller-statefulset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="conflict",pod="conflicting-controller-pod",phase="Running",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running"}
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="conflict",phase="Running",workload="conflicting-controller-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+
+  # Keep identical pod and workload names isolated by cluster and namespace.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="cluster-a",namespace="ns-a",pod="isolated-deployment-pod",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="isolated-deployment-rs",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="cluster-a",namespace="ns-a",replicaset="isolated-deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="isolated-deployment",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="cluster-a",namespace="ns-a",pod="isolated-deployment-pod",condition="true",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_pod_status_phase{cluster="cluster-a",namespace="ns-a",pod="isolated-deployment-pod",phase="Running",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_deployment_spec_replicas{cluster="cluster-a",namespace="ns-a",deployment="isolated-deployment",job="kube-state-metrics"}'
+      values: '2 2'
+    - series: 'kube_pod_owner{cluster="cluster-b",namespace="ns-b",pod="isolated-deployment-pod",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="isolated-deployment-rs",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="cluster-b",namespace="ns-b",replicaset="isolated-deployment-rs",owner_is_controller="true",owner_kind="Deployment",owner_name="isolated-deployment",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_pod_status_ready{cluster="cluster-b",namespace="ns-b",pod="isolated-deployment-pod",condition="true",job="kube-state-metrics"}'
+      values: '0 0'
+    - series: 'kube_pod_status_phase{cluster="cluster-b",namespace="ns-b",pod="isolated-deployment-pod",phase="Pending",job="kube-state-metrics"}'
+      values: '1 1'
+    - series: 'kube_deployment_spec_replicas{cluster="cluster-b",namespace="ns-b",deployment="isolated-deployment",job="kube-state-metrics"}'
+      values: '3 3'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 0
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-a",namespace="ns-a",phase="Running",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="cluster-b",namespace="ns-b",phase="Pending",workload="isolated-deployment",workload_type="deployment",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="cluster-a",namespace="ns-a",workload="isolated-deployment",workload_type="deployment"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="cluster-b",namespace="ns-b",workload="isolated-deployment",workload_type="deployment"}'
+        value: 3
+
+  # Follow ownership changes while stale and live controller references overlap.
+  - interval: 1m
+    input_series:
+    - series: 'kube_pod_owner{cluster="test",namespace="transition",pod="ownership-transition-pod",owner_is_controller="true",owner_kind="DaemonSet",owner_name="ownership-transition-daemonset",job="kube-state-metrics"}'
+      values: '1 1 stale'
+    - series: 'kube_pod_owner{cluster="test",namespace="transition",pod="ownership-transition-pod",owner_is_controller="true",owner_kind="StatefulSet",owner_name="ownership-transition-statefulset",job="kube-state-metrics"}'
+      values: 'stale 1 1'
+    - series: 'kube_pod_status_ready{cluster="test",namespace="transition",pod="ownership-transition-pod",condition="true",job="kube-state-metrics"}'
+      values: '1 1 1'
+    - series: 'kube_pod_status_phase{cluster="test",namespace="transition",pod="ownership-transition-pod",phase="Running",job="kube-state-metrics"}'
+      values: '1 1 1'
+
+    promql_expr_test:
+    - eval_time: 0m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 2m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 0m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 2m
+      expr: namespace_workload:kube_pods_ready:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_ready:sum{cluster="test",namespace="transition",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 0m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-daemonset",workload_type="daemonset",workload_is_controller="true"}'
+        value: 1
+    - eval_time: 2m
+      expr: namespace_workload:kube_pods_phase:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_phase:sum{cluster="test",namespace="transition",phase="Running",workload="ownership-transition-statefulset",workload_type="statefulset",workload_is_controller="true"}'
+        value: 1
+
+  # Deduplicate standalone ReplicaSet metrics from redundant KSM instances.
+  - interval: 1m
+    input_series:
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="deduplicated-standalone-replicaset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="deduplicated-standalone-replicaset",job="kube-state-metrics",instance="ksm-2"}'
+      values: '2 2'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deduplicated-standalone-replicaset",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deduplicated-standalone-replicaset",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deduplicated-standalone-replicaset-pod",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="deduplicated-standalone-replicaset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_pod_owner{cluster="test",namespace="default",pod="deduplicated-standalone-replicaset-pod",owner_is_controller="true",owner_kind="ReplicaSet",owner_name="deduplicated-standalone-replicaset",job="kube-state-metrics",instance="ksm-2"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+      exp_samples:
+      - labels: 'namespace_workload:kube_pod_owner:derived{cluster="test",namespace="default",workload="deduplicated-standalone-replicaset",workload_type="replicaset",workload_is_controller="true"}'
+        value: 1
+
+  # Record desired pods for every supported workload type.
+  - interval: 1m
+    input_series:
+    - series: 'kube_daemonset_status_desired_number_scheduled{cluster="test",namespace="default",daemonset="desired-daemonset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_daemonset_status_desired_number_scheduled{cluster="test",namespace="default",daemonset="desired-daemonset",job="kube-state-metrics",instance="ksm-2"}'
+      values: '2 2'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="desired-deployment",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="desired-standalone-replicaset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '5 5'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="desired-standalone-replicaset",owner_kind="",owner_name="",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+    - series: 'kube_statefulset_replicas{cluster="test",namespace="default",statefulset="desired-statefulset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '6 6'
+    - series: 'kube_statefulset_replicas{cluster="test",namespace="default",statefulset="desired-statefulset",job="kube-state-metrics",instance="ksm-2"}'
+      values: '6 6'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="desired-daemonset",workload_type="daemonset"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="desired-deployment",workload_type="deployment"}'
+        value: 3
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="desired-standalone-replicaset",workload_type="replicaset"}'
+        value: 5
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="desired-statefulset",workload_type="statefulset"}'
+        value: 6
+
+  # Do not record a Deployment-owned ReplicaSet as a standalone workload.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="deployment-with-owned-replicaset",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_replicaset_spec_replicas{cluster="test",namespace="default",replicaset="deployment-with-owned-replicaset-rs",job="kube-state-metrics",instance="ksm-1"}'
+      values: '3 3'
+    - series: 'kube_replicaset_owner{cluster="test",namespace="default",replicaset="deployment-with-owned-replicaset-rs",owner_kind="Deployment",owner_name="deployment-with-owned-replicaset",owner_is_controller="true",job="kube-state-metrics",instance="ksm-1"}'
+      values: '1 1'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="deployment-with-owned-replicaset",workload_type="deployment"}'
+        value: 3
+
+  # Keep desired workloads without observed pods, including scale transitions through zero.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="scaled-deployment",job="kube-state-metrics",instance="ksm-1"}'
+      values: '0 3 0'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pod_owner:derived
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_ready:sum
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_phase:sum
+    - eval_time: 0m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="scaled-deployment",workload_type="deployment"}'
+        value: 0
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="scaled-deployment",workload_type="deployment"}'
+        value: 3
+    - eval_time: 2m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="scaled-deployment",workload_type="deployment"}'
+        value: 0
+
+  # Keep desired counts isolated for multiple workloads in one namespace.
+  - interval: 1m
+    input_series:
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="deployment-a",job="kube-state-metrics",instance="ksm-1"}'
+      values: '2 2'
+    - series: 'kube_deployment_spec_replicas{cluster="test",namespace="default",deployment="deployment-b",job="kube-state-metrics",instance="ksm-1"}'
+      values: '7 7'
+
+    promql_expr_test:
+    - eval_time: 1m
+      expr: namespace_workload:kube_pods_desired:sum
+      exp_samples:
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="deployment-a",workload_type="deployment"}'
+        value: 2
+      - labels: 'namespace_workload:kube_pods_desired:sum{cluster="test",namespace="default",workload="deployment-b",workload_type="deployment"}'
+        value: 7
