@@ -16,6 +16,7 @@
 local defaultQueries = import './queries/pod-total.libsonnet';
 local defaultVariables = import './variables/pod-total.libsonnet';
 local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonnet';
+local annotations = import '../../lib/annotations.libsonnet';
 local gauge = g.panel.gauge;
 local prometheus = g.query.prometheus;
 local timeSeries = g.panel.timeSeries;
@@ -166,6 +167,7 @@ local timeSeries = g.panel.timeSeries;
       + g.dashboard.time.withTo('now')
       + g.dashboard.withRefresh($._config.grafanaK8s.refresh)
       + g.dashboard.withVariables([variables.datasource, variables.cluster, variables.namespace, variables.pod])
+      + annotations.withContainerRestarts($._config.grafanaK8s.containerRestartAnnotation, $._config.grafanaK8s.containerRestartAnnotationEnable)
       + g.dashboard.withPanels(g.util.grid.wrapPanels(panels, panelWidth=12, panelHeight=9)),
   },
 }
