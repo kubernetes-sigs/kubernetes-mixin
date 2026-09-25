@@ -31,8 +31,16 @@
 
   // Pass `$._config.grafanaK8s.containerRestartAnnotation` as `include` and
   // `$._config.grafanaK8s.containerRestartAnnotationEnable` as `enable`.
-  withContainerRestarts(include, enable)::
+  withContainerRestarts(include, enable, expr=$.containerRestarts.expr)::
     if include then
-      { annotations+: { list+: [$.containerRestarts { enable: enable }] } }
+      { annotations+: { list+: [$.containerRestarts { enable: enable, expr: expr }] } }
     else {},
+
+  // Like the `containerRestarts` expr, but restricted to pods of the selected
+  // workload and workload_type
+  containerRestartsByWorkloadExpr: |||
+    (sum by (cluster, namespace, pod, container) (increase(kube_pod_container_status_restarts_total{cluster="$cluster", namespace="$namespace"}[5m])) > 0)
+    * on (cluster, namespace, pod) group_left(workload, workload_type)
+    namespace_workload_pod:kube_pod_owner:relabel{cluster="$cluster", namespace="$namespace", workload=~"$workload", workload_type=~"$type"}
+  |||,
 }
