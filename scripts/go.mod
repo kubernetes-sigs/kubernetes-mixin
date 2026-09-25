@@ -8,6 +8,7 @@ require (
 	github.com/errata-ai/vale/v3 v3.18.0
 	github.com/google/go-jsonnet v0.22.0
 	github.com/jsonnet-bundler/jsonnet-bundler v0.6.0
+	github.com/prometheus/common v0.72.0
 	github.com/prometheus/prometheus v0.315.0
 )
 
@@ -207,7 +208,6 @@ require (
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_golang/exp v0.0.0-20260907100614-57bb367da472 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/exporter-toolkit v0.19.0 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
