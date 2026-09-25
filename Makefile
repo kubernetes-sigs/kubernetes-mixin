@@ -27,6 +27,8 @@ MARKDOWNFMT_BIN=$(BIN_DIR)/markdownfmt
 VALE_BIN=$(BIN_DIR)/vale
 PROMTOOL_BIN=$(BIN_DIR)/promtool
 PINT_BIN=$(BIN_DIR)/pint
+METRICS_BIN=$(BIN_DIR)/required-metrics
+METRICS_FILE=metrics.txt
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -90,7 +92,7 @@ clean-dashboards:
 DASHBOARD_SOURCES = $(shell find $(SRC_DIR) -name '*.libsonnet' 2>/dev/null)
 
 .PHONY: generate
-generate: prometheus_alerts.yaml prometheus_rules.yaml $(OUT_DIR)/.dashboards-generated
+generate: prometheus_alerts.yaml prometheus_rules.yaml $(OUT_DIR)/.dashboards-generated $(METRICS_FILE)
 
 $(JSONNET_VENDOR): $(JB_BIN) jsonnetfile.json
 	$(JB_BIN) install
@@ -117,6 +119,19 @@ $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonn
 	@mkdir -p $(OUT_DIR)
 	@$(JSONNET_BIN) -J vendor -m $(OUT_DIR) lib/dashboards.jsonnet
 	@touch $@
+
+$(METRICS_BIN): scripts/metrics/*.go scripts/go.mod scripts/go.sum | $(BIN_DIR)
+	@cd scripts && go build -o $(METRICS_BIN) ./metrics
+
+$(METRICS_FILE): $(METRICS_BIN) prometheus_alerts.yaml prometheus_rules.yaml $(OUT_DIR)/.dashboards-generated
+	@$(METRICS_BIN) \
+		-rules prometheus_alerts.yaml \
+		-rules prometheus_rules.yaml \
+		-dashboards $(OUT_DIR) \
+		-output $@
+
+.PHONY: metrics
+metrics: $(METRICS_FILE)
 
 .PHONY: lint
 lint: jsonnet-lint alerts-lint dashboards-lint vale pint-lint
@@ -166,6 +181,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 
 .PHONY: test
 test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 
 $(BIN_DIR):
