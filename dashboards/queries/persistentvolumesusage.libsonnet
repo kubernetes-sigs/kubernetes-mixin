@@ -27,16 +27,19 @@
     sum without(instance, node) (topk(1, (kubelet_volume_stats_available_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})))
   ||| % config,
 
+  // Shared volumes can have multiple reporters. Aggregate each operand by PVC
+  // before arithmetic so independently selected node/instance labels cannot differ.
   volumeSpaceUsagePercent(config):: |||
-    max without(instance,node) (
-    (
-      topk(1, kubelet_volume_stats_capacity_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})
-      -
-      topk(1, kubelet_volume_stats_available_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})
+    100 * (
+      1 -
+      max by (%(clusterLabel)s, namespace, persistentvolumeclaim) (
+        kubelet_volume_stats_available_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"}
+      )
+      /
+      max by (%(clusterLabel)s, namespace, persistentvolumeclaim) (
+        kubelet_volume_stats_capacity_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"}
+      )
     )
-    /
-    topk(1, kubelet_volume_stats_capacity_bytes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})
-    * 100)
   ||| % config,
 
   // Volume inodes Usage
@@ -52,10 +55,14 @@
   ||| % config,
 
   volumeInodesUsagePercent(config):: |||
-    max without(instance,node) (
-    topk(1, kubelet_volume_stats_inodes_used{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})
-    /
-    topk(1, kubelet_volume_stats_inodes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"})
-    * 100)
+    100 * (
+      max by (%(clusterLabel)s, namespace, persistentvolumeclaim) (
+        kubelet_volume_stats_inodes_used{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"}
+      )
+      /
+      max by (%(clusterLabel)s, namespace, persistentvolumeclaim) (
+        kubelet_volume_stats_inodes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, namespace="$namespace", persistentvolumeclaim="$volume"}
+      )
+    )
   ||| % config,
 }
