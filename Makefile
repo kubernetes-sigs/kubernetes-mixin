@@ -165,8 +165,14 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test dashboards-test prometheus_alerts.yaml prometheus_rules.yaml
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
+
+.PHONY: dashboards-test
+dashboards-test: $(JSONNET_BIN) $(PROMTOOL_BIN)
+	@mkdir -p tmp/tests
+	@$(JSONNET_BIN) -S tests/persistentvolumesusage-test.jsonnet > tmp/tests/persistentvolumesusage-test.yaml
+	@$(PROMTOOL_BIN) test rules tmp/tests/persistentvolumesusage-test.yaml
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
