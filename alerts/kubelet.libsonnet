@@ -181,8 +181,8 @@ local utils = import '../lib/utils.libsonnet';
             expr: |||
               histogram_quantile(0.99,
                 sum by (%(clusterLabel)s, instance, le) (
-                  topk by (%(clusterLabel)s, instance, le, operation_type) (1,
-                    rate(kubelet_pod_worker_duration_seconds_bucket{%(kubeletSelector)s}[5m])
+                  topk by (%(clusterLabel)s, instance, le) (1,
+                    rate(kubelet_pod_start_sli_duration_seconds_bucket{%(kubeletSelector)s}[5m])
                   )
                 )
               )

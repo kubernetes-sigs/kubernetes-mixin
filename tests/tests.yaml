@@ -1316,10 +1316,12 @@ tests:
 
 - interval: 1m
   input_series:
-  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",apiserver="kube-apiserver"}'
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",apiserver="kube-apiserver",code="429"}'
     values: '1+1x10'
-  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",apiserver="kube-apiserver"}'
-    values: '1+2x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",apiserver="kube-apiserver",code="429"}'
+    values: '1+1x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",apiserver="kube-apiserver",code="200"}'
+    values: '1+1x10'
   alert_rule_test:
   - eval_time: 5m    # alert hasn't fired
     alertname: KubeAPITerminatedRequests
@@ -1330,9 +1332,91 @@ tests:
         severity: warning
         cluster: "kubernetes"
       exp_annotations:
-        summary: "The kubernetes apiserver has terminated 33.33% of its incoming requests."
-        description: "The kubernetes apiserver has terminated 33.33% of its incoming requests."
+        summary: "The kubernetes apiserver has terminated 50% of its incoming requests."
+        description: "The kubernetes apiserver has terminated 50% of its incoming requests."
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
+
+# APF and max-inflight increment both request_total and request_terminations_total for a dropped 429.
+# Their populations overlap; 22 terminated requests out of 100 must exceed the 20% threshold.
+- name: KubeAPITerminatedRequests counts dropped 429s once
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+22x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+22x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="200"}'
+    values: '0+78x10'
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: KubeAPITerminatedRequests
+  - eval_time: 10m
+    alertname: KubeAPITerminatedRequests
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        cluster: kubernetes
+      exp_annotations:
+        summary: "The kubernetes apiserver has terminated 22% of its incoming requests."
+        description: "The kubernetes apiserver has terminated 22% of its incoming requests."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
+
+# Keep non-429 terminations in the denominator until the timeout path's
+# eventual request_total population has been established for every outcome.
+- name: KubeAPITerminatedRequests retains non-429 denominator
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",code="504"}'
+    values: '0+30x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="200"}'
+    values: '0+70x10'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPITerminatedRequests
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        cluster: kubernetes
+      exp_annotations:
+        summary: "The kubernetes apiserver has terminated 30% of its incoming requests."
+        description: "The kubernetes apiserver has terminated 30% of its incoming requests."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
+
+- name: KubeAPITerminatedRequests preserves mixed 429 and timeout terminations
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+22x10'
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",code="504"}'
+    values: '0+10x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+22x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="200"}'
+    values: '0+78x10'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPITerminatedRequests
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        cluster: kubernetes
+      exp_annotations:
+        summary: "The kubernetes apiserver has terminated 29.09% of its incoming requests."
+        description: "The kubernetes apiserver has terminated 29.09% of its incoming requests."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapiterminatedrequests"
+
+- name: KubeAPITerminatedRequests stays quiet at exactly 20 percent
+  interval: 1m
+  input_series:
+  - series: 'apiserver_request_terminations_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+20x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="429"}'
+    values: '0+20x10'
+  - series: 'apiserver_request_total{cluster="kubernetes",job="kube-apiserver",code="200"}'
+    values: '0+80x10'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeAPITerminatedRequests
 
 - interval: 1m
   input_series:
