@@ -16,6 +16,7 @@
 local defaultQueries = import './queries/namespace-by-workload.libsonnet';
 local defaultVariables = import './variables/namespace-by-workload.libsonnet';
 local g = import 'github.com/grafana/grafonnet/gen/grafonnet-latest/main.libsonnet';
+local annotations = import '../../lib/annotations.libsonnet';
 local barGauge = g.panel.barGauge;
 local prometheus = g.query.prometheus;
 local table = g.panel.table;
@@ -318,6 +319,7 @@ local timeSeries = g.panel.timeSeries;
       + g.dashboard.time.withTo('now')
       + g.dashboard.withRefresh($._config.grafanaK8s.refresh)
       + g.dashboard.withVariables([variables.datasource, variables.cluster, variables.namespace, variables.workload_type])
+      + annotations.withContainerRestarts($._config.grafanaK8s.containerRestartAnnotation, $._config.grafanaK8s.containerRestartAnnotationEnable)
       + g.dashboard.withPanels(g.util.grid.wrapPanels(panels, panelWidth=12, panelHeight=9)),
   },
 }
