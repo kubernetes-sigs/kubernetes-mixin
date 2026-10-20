@@ -46,26 +46,26 @@ tests:
 - name: "KubeletPodStartUpLatencyHigh alert test, including duplicate series check"
   interval: 1m
   input_series:
-  - series: 'kubelet_pod_worker_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="+Inf"}'
-    values: '0+1x16'
-  - series: 'kubelet_pod_worker_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="+Inf",dupe="dupe"}'
-    values: '0+1x16'
-  - series: 'kubelet_pod_worker_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="99"}'
-    values: '0+1x16'
-  - series: 'kubelet_pod_worker_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="99",dupe="dupe"}'
-    values: '0+1x16'
-  - series: 'kubelet_pod_worker_duration_seconds_count{cluster="cluster",instance="ip-172-0-0-1",job="kubelet"}'
-    values: '0+1x16'
-  - series: 'kubelet_pod_worker_duration_seconds_count{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",dupe="dupe"}'
-    values: '0+1x16'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="+Inf"}'
+    values: '0+1x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="+Inf",dupe="dupe"}'
+    values: '0+1x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="60"}'
+    values: '0+0x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="60",dupe="dupe"}'
+    values: '0+0x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="120"}'
+    values: '0+1x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="ip-172-0-0-1",job="kubelet",le="120",dupe="dupe"}'
+    values: '0+1x25'
   - series: 'kubelet_node_name{cluster="cluster",node="ip-172-0-0-1",instance="ip-172-0-0-1",job="kubelet"}'
-    values: '1x16'
+    values: '1x25'
   - series: 'kubelet_node_name{cluster="cluster",node="ip-172-0-0-1",instance="ip-172-0-0-1",job="kubelet",dupe="dupe"}'
-    values: '1x16'
+    values: '1x25'
   alert_rule_test:
   - eval_time: 15m
     alertname: KubeletPodStartUpLatencyHigh
-  - eval_time: 16m
+  - eval_time: 25m
     alertname: KubeletPodStartUpLatencyHigh
     exp_alerts:
     - exp_labels:
@@ -75,5 +75,20 @@ tests:
         node: ip-172-0-0-1
       exp_annotations:
         summary: "Kubelet Pod startup latency is too high."
-        description: "Kubelet Pod startup 99th percentile latency is 98.01 seconds on node ip-172-0-0-1."
+        description: "Kubelet Pod startup 99th percentile latency is 119.4 seconds on node ip-172-0-0-1."
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletpodstartuplatencyhigh"
+
+- name: "KubeletPodStartUpLatencyHigh ignores healthy startup on a second node"
+  interval: 1m
+  input_series:
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="healthy",job="kubelet",le="60"}'
+    values: '0+1x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="healthy",job="kubelet",le="120"}'
+    values: '0+1x25'
+  - series: 'kubelet_pod_start_sli_duration_seconds_bucket{cluster="cluster",instance="healthy",job="kubelet",le="+Inf"}'
+    values: '0+1x25'
+  - series: 'kubelet_node_name{cluster="cluster",instance="healthy",node="healthy",job="kubelet"}'
+    values: '1x25'
+  alert_rule_test:
+  - eval_time: 25m
+    alertname: KubeletPodStartUpLatencyHigh
