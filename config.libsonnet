@@ -104,6 +104,13 @@
 
       // Timezone for Grafana dashboards:: UTC, browser, ...
       grafanaTimezone: 'UTC',
+
+      // Add a container-restarts annotation to dashboards containing pods.
+      // Set to false to generate the dashboards without it.
+      containerRestartAnnotation: true,
+
+      // Whether the container-restarts annotation is enabled by default in each dashboard
+      containerRestartAnnotationEnable: true,
     },
 
     // Units for panels
