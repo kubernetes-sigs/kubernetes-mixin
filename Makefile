@@ -29,6 +29,7 @@ PROMTOOL_BIN=$(BIN_DIR)/promtool
 PINT_BIN=$(BIN_DIR)/pint
 METRICS_BIN=$(BIN_DIR)/required-metrics
 METRICS_FILE=metrics.txt
+ALL_RULES_FILE=tmp/prometheus_rules_all.yaml
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -83,6 +84,7 @@ clean-alerts:
 
 clean-rules:
 	rm -f prometheus_rules.yaml
+	rm -f $(ALL_RULES_FILE)
 
 clean-dashboards:
 	rm -f $(OUT_DIR)/*.json*
@@ -112,8 +114,12 @@ markdownfmt: $(MARKDOWNFMT_BIN)
 prometheus_alerts.yaml: $(JSONNET_BIN) mixin.libsonnet lib/alerts.jsonnet alerts/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/alerts.jsonnet > $@
 
-prometheus_rules.yaml: $(JSONNET_BIN) mixin.libsonnet lib/rules.jsonnet rules/*.libsonnet
+prometheus_rules.yaml: $(JSONNET_BIN) mixin.libsonnet config.libsonnet lib/rules.jsonnet rules/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/rules.jsonnet > $@
+
+$(ALL_RULES_FILE): $(JSONNET_BIN) mixin.libsonnet config.libsonnet lib/rules-all.jsonnet lib/rules-all.libsonnet rules/*.libsonnet
+	@mkdir -p $(dir $@)
+	@$(JSONNET_BIN) -J vendor -S lib/rules-all.jsonnet > $@
 
 $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonnet lib/dashboards.jsonnet $(DASHBOARD_SOURCES)
 	@mkdir -p $(OUT_DIR)
@@ -123,11 +129,10 @@ $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonn
 $(METRICS_BIN): scripts/metrics/*.go scripts/go.mod scripts/go.sum | $(BIN_DIR)
 	@cd scripts && go build -o $(METRICS_BIN) ./metrics
 
-$(METRICS_FILE): $(METRICS_BIN) $(JSONNET_BIN) prometheus_alerts.yaml prometheus_rules.yaml $(OUT_DIR)/.dashboards-generated
-	@$(JSONNET_BIN) -J vendor -S -e 'std.manifestYamlDoc(((import "mixin.libsonnet") + (import "rules/windows.libsonnet")).prometheusRules)' > tmp/windows_rules.yaml
+$(METRICS_FILE): $(METRICS_BIN) prometheus_alerts.yaml $(ALL_RULES_FILE) $(OUT_DIR)/.dashboards-generated
 	@$(METRICS_BIN) \
 		-rules prometheus_alerts.yaml \
-		-rules tmp/windows_rules.yaml \
+		-rules $(ALL_RULES_FILE) \
 		-dashboards $(OUT_DIR) \
 		-output $@
 
@@ -143,8 +148,8 @@ jsonnet-lint: $(JSONNETLINT_BIN) $(JSONNET_VENDOR)
 		xargs -n 1 -P $(NPROC) -- $(JSONNETLINT_BIN) -J vendor
 
 .PHONY: alerts-lint
-alerts-lint: $(PROMTOOL_BIN) prometheus_alerts.yaml prometheus_rules.yaml
-	@$(PROMTOOL_BIN) check rules prometheus_rules.yaml
+alerts-lint: $(PROMTOOL_BIN) prometheus_alerts.yaml $(ALL_RULES_FILE)
+	@$(PROMTOOL_BIN) check rules $(ALL_RULES_FILE)
 	@$(PROMTOOL_BIN) check rules prometheus_alerts.yaml
 
 $(OUT_DIR)/.lint: $(OUT_DIR)/.dashboards-generated
@@ -163,9 +168,9 @@ vale: $(VALE_BIN)
 		$(VALE_BIN) $(MD_FILES)
 
 .PHONY: pint-lint
-pint-lint: prometheus_alerts.yaml prometheus_rules.yaml $(PINT_BIN)
+pint-lint: prometheus_alerts.yaml $(ALL_RULES_FILE) $(PINT_BIN)
 	@# Pint will not exit with a non-zero status code if there are linting issues.
-	@output=$$($(PINT_BIN) -n -o -l WARN lint prometheus_alerts.yaml prometheus_rules.yaml 2>&1); \
+	@output=$$($(PINT_BIN) -n -o -l WARN lint prometheus_alerts.yaml $(ALL_RULES_FILE) 2>&1); \
 	if [ -n "$$output" ]; then \
 		echo "\n$$output"; \
 		exit 1; \
@@ -181,7 +186,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml $(ALL_RULES_FILE)
 	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 

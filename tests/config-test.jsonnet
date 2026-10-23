@@ -16,6 +16,7 @@
 // Generation-level regression tests for configurations the mixin has to keep supporting.
 // Evaluated by `make config-test`, where a failed assertion fails the build.
 
+local allRulesMixin = import '../lib/rules-all.libsonnet';
 local mixin = import '../mixin.libsonnet';
 
 local withApiserverWindows(windows) = mixin {
@@ -40,6 +41,27 @@ local averagedRecords(rules) = std.set([
   if std.length(std.findSubstr('avg_over_time', rule.expr)) > 0
 ]);
 
+local extendedWorkloadGroupNames = std.set([
+  'k8s.rules.workload',
+  'k8s.rules.workload.pods_desired',
+  'k8s.rules.workload.pods_phase.pending',
+  'k8s.rules.workload.pods_phase.running',
+  'k8s.rules.workload.pods_phase.succeeded',
+  'k8s.rules.workload.pods_phase.failed',
+  'k8s.rules.workload.pods_phase.unknown',
+]);
+
+local windowsGroupNames = std.set([
+  'windows.node.rules',
+  'windows.pod.rules',
+]);
+
+local namedGroups(groups, names) = [
+  group
+  for group in groups
+  if std.member(names, group.name)
+];
+
 // An empty window list disables the apiserver SLOs. It has to keep emitting no burn rate
 // rules and no alerts, rather than failing generation on the empty list.
 local noWindows = withApiserverWindows([]);
@@ -59,5 +81,18 @@ local exoticRules = groupRules(exoticWindows.prometheusRules.groups, 'kube-apise
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_bad_events:rate500ms');
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_events:rate500ms');
 assert averagedRecords(exoticRules) == std.set(['apiserver_request:burnrate2w']);
+
+// Extended workload recording rules are opt-in, but all groups have to render in the
+// maximal rules profile used by repository validation and tests.
+local defaultExtendedWorkloadGroups = namedGroups(mixin.prometheusRules.groups, extendedWorkloadGroupNames);
+local enabledExtendedWorkloadGroups = namedGroups(allRulesMixin.prometheusRules.groups, extendedWorkloadGroupNames);
+assert defaultExtendedWorkloadGroups == [];
+assert std.set([group.name for group in enabledExtendedWorkloadGroups]) == extendedWorkloadGroupNames;
+
+// Windows recording rules are optional for consumers but are part of the maximal profile.
+local defaultWindowsGroups = namedGroups(mixin.prometheusRules.groups, windowsGroupNames);
+local enabledWindowsGroups = namedGroups(allRulesMixin.prometheusRules.groups, windowsGroupNames);
+assert defaultWindowsGroups == [];
+assert std.set([group.name for group in enabledWindowsGroups]) == windowsGroupNames;
 
 true

@@ -15,7 +15,7 @@
 
 rule_files:
 - ../prometheus_alerts.yaml
-- ../prometheus_rules.yaml
+- ../tmp/prometheus_rules_all.yaml
 
 evaluation_interval: 1m
 
