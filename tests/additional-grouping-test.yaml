@@ -1,0 +1,62 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../tmp/additional-grouping-rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+- name: additional grouping is retained through the node CPU join
+  interval: 1m
+  input_series:
+  - series: 'node_cpu_seconds_total{cluster="cluster",namespace="monitoring",pod="node-exporter",tenant="first",job="node-exporter",mode="idle",cpu="0"}'
+    values: '1 1'
+  - series: 'node_cpu_seconds_total{cluster="cluster",namespace="monitoring",pod="node-exporter",tenant="first",job="node-exporter",mode="idle",cpu="1"}'
+    values: '1 1'
+  - series: 'node_cpu_seconds_total{cluster="cluster",namespace="monitoring",pod="node-exporter",tenant="second",job="node-exporter",mode="idle",cpu="0"}'
+    values: '1 1'
+  - series: 'kube_pod_info{cluster="cluster",namespace="monitoring",pod="node-exporter",tenant="first",node="node-first",job="kube-state-metrics"}'
+    values: '1 1'
+  - series: 'kube_pod_info{cluster="cluster",namespace="monitoring",pod="node-exporter",tenant="second",node="node-second",job="kube-state-metrics"}'
+    values: '1 1'
+  promql_expr_test:
+  - eval_time: 1m
+    expr: node:node_num_cpu:sum
+    exp_samples:
+    - value: 2
+      labels: 'node:node_num_cpu:sum{cluster="cluster",namespace="monitoring",node="node-first",tenant="first"}'
+    - value: 1
+      labels: 'node:node_num_cpu:sum{cluster="cluster",namespace="monitoring",node="node-second",tenant="second"}'
+
+- name: additional grouping isolates Windows container metadata joins
+  interval: 1m
+  input_series:
+  - series: 'windows_container_available{cluster="cluster",container_id="shared-id",tenant="first",job="kubernetes-windows-exporter"}'
+    values: '10 10'
+  - series: 'windows_container_available{cluster="cluster",container_id="shared-id",tenant="second",job="kubernetes-windows-exporter"}'
+    values: '20 20'
+  - series: 'kube_pod_container_info{cluster="cluster",container_id="shared-id",tenant="first",container="app-first",pod="pod-first",namespace="monitoring",job="kube-state-metrics"}'
+    values: '1 1'
+  - series: 'kube_pod_container_info{cluster="cluster",container_id="shared-id",tenant="second",container="app-second",pod="pod-second",namespace="monitoring",job="kube-state-metrics"}'
+    values: '1 1'
+  promql_expr_test:
+  - eval_time: 1m
+    expr: windows_pod_container_available
+    exp_samples:
+    - value: 10
+      labels: 'windows_pod_container_available{cluster="cluster",container="app-first",container_id="shared-id",job="kubernetes-windows-exporter",namespace="monitoring",pod="pod-first",tenant="first"}'
+    - value: 20
+      labels: 'windows_pod_container_available{cluster="cluster",container="app-second",container_id="shared-id",job="kubernetes-windows-exporter",namespace="monitoring",pod="pod-second",tenant="second"}'

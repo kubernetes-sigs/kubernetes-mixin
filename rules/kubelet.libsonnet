@@ -13,12 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   _config+:: {
     kubeletSelector: 'job="kubelet"',
   },
 
   prometheusRules+:: {
+    local additionalGrouping = utils.withoutLabels($._config.additionalGrouping.recordingRules, ['quantile']),
+    local groupingLabels(labels, excludedAdditionalLabels=[]) =
+      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
+    local config = $._config {
+      groupingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance']),
+      groupingClusterInstanceLe: groupingLabels([$._config.clusterLabel, 'instance', 'le']),
+      groupingClusterInstanceNode: groupingLabels([$._config.clusterLabel, 'instance', 'node']),
+      matchingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance'], ['le', 'node', 'operation_type']),
+    },
+
     groups+: [
       {
         name: 'kubelet.rules',
@@ -28,11 +40,11 @@
             expr: |||
               histogram_quantile(
                 %(quantile)s,
-                sum(rate(kubelet_pleg_relist_duration_seconds_bucket{%(kubeletSelector)s}[5m])) by (%(clusterLabel)s, instance, le)
-                * on(%(clusterLabel)s, instance) group_left (node)
-                max by (%(clusterLabel)s, instance, node) (kubelet_node_name{%(kubeletSelector)s})
+                sum(rate(kubelet_pleg_relist_duration_seconds_bucket{%(kubeletSelector)s}[5m])) by (%(groupingClusterInstanceLe)s)
+                * on(%(matchingClusterInstance)s) group_left (node)
+                max by (%(groupingClusterInstanceNode)s) (kubelet_node_name{%(kubeletSelector)s})
               )
-            ||| % ({ quantile: quantile } + $._config),
+            ||| % ({ quantile: quantile } + config),
             labels: {
               quantile: quantile,
             },

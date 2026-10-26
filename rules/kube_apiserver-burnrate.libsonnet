@@ -13,8 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   prometheusRules+:: {
+    local groupingCluster = utils.groupingLabels(
+      [$._config.clusterLabel],
+      utils.withoutLabels($._config.additionalGrouping.recordingRules, ['code', 'le', 'resource', 'scope', 'verb'])
+    ),
     local unitSeconds = {
       ms: 0.001,
       s: 1,
@@ -89,26 +95,26 @@
           (
             (
               # too slow
-              sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_count{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s}[%(window)s]))
+              sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_count{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s}[%(window)s]))
               -
               (
                 (
-                  sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope=~"resource|",le=~"%(kubeApiserverReadResourceLatency)s"}[%(window)s]))
+                  sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope=~"resource|",le=~"%(kubeApiserverReadResourceLatency)s"}[%(window)s]))
                   or
                   vector(0)
                 )
                 +
-                sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope="namespace",le=~"%(kubeApiserverReadNamespaceLatency)s"}[%(window)s]))
+                sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope="namespace",le=~"%(kubeApiserverReadNamespaceLatency)s"}[%(window)s]))
                 +
-                sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope="cluster",le=~"%(kubeApiserverReadClusterLatency)s"}[%(window)s]))
+                sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,%(kubeApiserverNonStreamingSelector)s,scope="cluster",le=~"%(kubeApiserverReadClusterLatency)s"}[%(window)s]))
               )
             )
             +
             # errors
-            sum by (%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,code=~"5.."}[%(window)s]))
+            sum by (%(groupingCluster)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(kubeApiserverReadSelector)s,code=~"5.."}[%(window)s]))
           )
         ||| % {
-          clusterLabel: $._config.clusterLabel,
+          groupingCluster: groupingCluster,
           window: window,
           kubeApiserverSelector: $._config.kubeApiserverSelector,
           kubeApiserverReadSelector: $._config.kubeApiserverReadSelector,
@@ -122,16 +128,16 @@
           (
             (
               # too slow
-              sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_count{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,%(kubeApiserverNonStreamingSelector)s}[%(window)s]))
+              sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_count{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,%(kubeApiserverNonStreamingSelector)s}[%(window)s]))
               -
-              sum by (%(clusterLabel)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,%(kubeApiserverNonStreamingSelector)s,le=~"%(kubeApiserverWriteLatency)s"}[%(window)s]))
+              sum by (%(groupingCluster)s) (rate(apiserver_request_sli_duration_seconds_bucket{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,%(kubeApiserverNonStreamingSelector)s,le=~"%(kubeApiserverWriteLatency)s"}[%(window)s]))
             )
             +
             # errors
-            sum by (%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,code=~"5.."}[%(window)s]))
+            sum by (%(groupingCluster)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(kubeApiserverWriteSelector)s,code=~"5.."}[%(window)s]))
           )
         ||| % {
-          clusterLabel: $._config.clusterLabel,
+          groupingCluster: groupingCluster,
           window: window,
           kubeApiserverSelector: $._config.kubeApiserverSelector,
           kubeApiserverWriteSelector: $._config.kubeApiserverWriteSelector,
@@ -141,9 +147,9 @@
 
     local totalExpr(verb, window) =
       |||
-        sum by (%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(verbSelector)s}[%(window)s]))
+        sum by (%(groupingCluster)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s,%(verbSelector)s}[%(window)s]))
       ||| % {
-        clusterLabel: $._config.clusterLabel,
+        groupingCluster: groupingCluster,
         window: window,
         kubeApiserverSelector: $._config.kubeApiserverSelector,
         verbSelector: if verb == 'read' then $._config.kubeApiserverReadSelector else $._config.kubeApiserverWriteSelector,

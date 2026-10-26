@@ -26,6 +26,18 @@
     ],
   },
 
+  groupingLabels(queryLabels, additionalLabels):
+    local labels = std.foldl(
+      function(labels, label)
+        if std.member(labels, label) then labels else labels + [label],
+      queryLabels + additionalLabels,
+      []
+    );
+    std.join(', ', labels),
+
+  withoutLabels(labels, excludedLabels):
+    [label for label in labels if !std.member(excludedLabels, label)],
+
   humanizeSeconds(s)::
     if s > 60 * 60 * 24
     then '%.1f days' % (s / 60 / 60 / 24)

@@ -29,6 +29,7 @@ PROMTOOL_BIN=$(BIN_DIR)/promtool
 PINT_BIN=$(BIN_DIR)/pint
 METRICS_BIN=$(BIN_DIR)/required-metrics
 METRICS_FILE=metrics.txt
+ADDITIONAL_GROUPING_RULES=tmp/additional-grouping-rules.yaml
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -115,6 +116,11 @@ prometheus_alerts.yaml: $(JSONNET_BIN) mixin.libsonnet lib/alerts.jsonnet alerts
 prometheus_rules.yaml: $(JSONNET_BIN) mixin.libsonnet lib/rules.jsonnet rules/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/rules.jsonnet > $@
 
+$(ADDITIONAL_GROUPING_RULES): $(JSONNET_BIN) $(JSONNET_VENDOR) tests/additional-grouping-rules.jsonnet mixin.libsonnet config.libsonnet lib/utils.libsonnet rules/*.libsonnet
+	@mkdir -p $(@D)
+	@$(JSONNET_BIN) -J vendor -S tests/additional-grouping-rules.jsonnet > $@.tmp
+	@mv $@.tmp $@
+
 $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonnet lib/dashboards.jsonnet $(DASHBOARD_SOURCES)
 	@mkdir -p $(OUT_DIR)
 	@$(JSONNET_BIN) -J vendor -m $(OUT_DIR) lib/dashboards.jsonnet
@@ -181,7 +187,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES)
 	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 
