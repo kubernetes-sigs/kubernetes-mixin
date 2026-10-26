@@ -15,6 +15,7 @@
 
 rule_files:
 - ../tmp/additional-grouping-rules.yaml
+- ../tmp/additional-grouping-alerts.yaml
 
 evaluation_interval: 1m
 
@@ -60,3 +61,223 @@ tests:
       labels: 'windows_pod_container_available{cluster="cluster",container="app-first",container_id="shared-id",job="kubernetes-windows-exporter",namespace="monitoring",pod="pod-first",tenant="first"}'
     - value: 20
       labels: 'windows_pod_container_available{cluster="cluster",container="app-second",container_id="shared-id",job="kubernetes-windows-exporter",namespace="monitoring",pod="pod-second",tenant="second"}'
+
+- name: additional grouping isolates pod alerts and label enrichment
+  interval: 1m
+  input_series:
+  - series: 'kube_pod_status_phase{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="first",job="kube-state-metrics",phase="Pending"}'
+    values: '1x20'
+  - series: 'kube_pod_status_phase{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="second",job="kube-state-metrics",phase="Pending"}'
+    values: '1x20'
+  - series: 'kube_pod_owner{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="first",owner_kind="ReplicaSet"}'
+    values: '1x20'
+  - series: 'kube_pod_owner{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="second",owner_kind="ReplicaSet"}'
+    values: '1x20'
+  - series: 'kube_pod_labels{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="first",label_team="one"}'
+    values: '1x20'
+  - series: 'kube_pod_labels{cluster="cluster",namespace="monitoring",pod="shared-pod",tenant="second",label_team="two"}'
+    values: '1x20'
+  alert_rule_test:
+  - eval_time: 16m
+    alertname: KubePodNotReady
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster"
+        job: "kube-state-metrics"
+        label_team: "one"
+        namespace: "monitoring"
+        pod: "shared-pod"
+        severity: "warning"
+        tenant: "first"
+      exp_annotations:
+        description: "Pod monitoring/shared-pod has been in a non-ready state for longer than 15 minutes on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
+        summary: "Pod has been in a non-ready state for more than 15 minutes."
+    - exp_labels:
+        cluster: "cluster"
+        job: "kube-state-metrics"
+        label_team: "two"
+        namespace: "monitoring"
+        pod: "shared-pod"
+        severity: "warning"
+        tenant: "second"
+      exp_annotations:
+        description: "Pod monitoring/shared-pod has been in a non-ready state for longer than 15 minutes on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepodnotready"
+        summary: "Pod has been in a non-ready state for more than 15 minutes."
+
+- name: additional grouping survives the API burn-rate recording pipeline
+  interval: 1m
+  input_series:
+  # The first tenant has 120 slow and 60 failed requests out of 600 per minute: 30% bad.
+  - series: 'apiserver_request_sli_duration_seconds_count{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",subresource=""}'
+    values: '0+600x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",subresource="",le="1.0"}'
+    values: '0+480x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",code="200"}'
+    values: '0+540x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="first",job="kube-apiserver",verb="POST",code="500"}'
+    values: '0+60x15'
+  # The second tenant has only 30 failed requests out of 600 per minute: 5% bad.
+  - series: 'apiserver_request_sli_duration_seconds_count{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",subresource=""}'
+    values: '0+600x15'
+  - series: 'apiserver_request_sli_duration_seconds_bucket{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",subresource="",le="1.0"}'
+    values: '0+600x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",code="200"}'
+    values: '0+570x15'
+  - series: 'apiserver_request_total{cluster="cluster",tenant="second",job="kube-apiserver",verb="POST",code="500"}'
+    values: '0+30x15'
+  promql_expr_test:
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_bad_events:rate5m{verb="write"}
+    exp_samples:
+    - value: 3
+      labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.5
+      labels: 'cluster_verb:apiserver_request_sli_bad_events:rate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: cluster_verb:apiserver_request_sli_events:rate5m{verb="write"}
+    exp_samples:
+    - value: 10
+      labels: 'cluster_verb:apiserver_request_sli_events:rate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 10
+      labels: 'cluster_verb:apiserver_request_sli_events:rate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: apiserver_request:burnrate5m{verb="write"}
+    exp_samples:
+    - value: 0.3
+      labels: 'apiserver_request:burnrate5m{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.05
+      labels: 'apiserver_request:burnrate5m{cluster="cluster",tenant="second",verb="write"}'
+  - eval_time: 10m
+    expr: apiserver_request:burnrate1h{verb="write"}
+    exp_samples:
+    - value: 0.30000000000000004
+      labels: 'apiserver_request:burnrate1h{cluster="cluster",tenant="first",verb="write"}'
+    - value: 0.05
+      labels: 'apiserver_request:burnrate1h{cluster="cluster",tenant="second",verb="write"}'
+  alert_rule_test:
+  - eval_time: 13m
+    alertname: KubeAPIErrorBudgetBurn
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster"
+        long: "1h"
+        severity: "critical"
+        short: "5m"
+        tenant: "first"
+      exp_annotations:
+        description: "The Kube API server is burning too much error budget on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeapierrorbudgetburn"
+        summary: "The Kube API server is burning too much error budget."
+
+- name: additional grouping survives the kubelet PLEG recording pipeline
+  interval: 1m
+  input_series:
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="first",job="kubelet",le="10"}'
+    values: '1+0x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="first",job="kubelet",le="+Inf"}'
+    values: '30+1x10'
+  - series: 'kubelet_node_name{cluster="cluster",instance="shared-instance",tenant="first",node="node-first",job="kubelet"}'
+    values: '1x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="second",job="kubelet",le="10"}'
+    values: '1+0x10'
+  - series: 'kubelet_pleg_relist_duration_seconds_bucket{cluster="cluster",instance="shared-instance",tenant="second",job="kubelet",le="+Inf"}'
+    values: '30+1x10'
+  - series: 'kubelet_node_name{cluster="cluster",instance="shared-instance",tenant="second",node="node-second",job="kubelet"}'
+    values: '1x10'
+  promql_expr_test:
+  - eval_time: 10m
+    expr: node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"}
+    exp_samples:
+    - value: 10
+      labels: 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{cluster="cluster",instance="shared-instance",node="node-first",quantile="0.99",tenant="first"}'
+    - value: 10
+      labels: 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{cluster="cluster",instance="shared-instance",node="node-second",quantile="0.99",tenant="second"}'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeletPlegDurationHigh
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster"
+        instance: "shared-instance"
+        node: "node-first"
+        quantile: "0.99"
+        severity: "warning"
+        tenant: "first"
+      exp_annotations:
+        description: "The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of 10 seconds on node node-first on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh"
+        summary: "Kubelet Pod Lifecycle Event Generator is taking too long to relist."
+    - exp_labels:
+        cluster: "cluster"
+        instance: "shared-instance"
+        node: "node-second"
+        quantile: "0.99"
+        severity: "warning"
+        tenant: "second"
+      exp_annotations:
+        description: "The Kubelet Pod Lifecycle Event Generator has a 99th percentile duration of 10 seconds on node node-second on cluster cluster."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubeletplegdurationhigh"
+        summary: "Kubelet Pod Lifecycle Event Generator is taking too long to relist."
+
+- name: additional grouping isolates persistent volume exclusions
+  interval: 1m
+  input_series:
+  - series: 'kubelet_volume_stats_available_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="first",job="kubelet"}'
+    values: '1x5'
+  - series: 'kubelet_volume_stats_capacity_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="first",job="kubelet"}'
+    values: '100x5'
+  - series: 'kubelet_volume_stats_used_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="first",job="kubelet"}'
+    values: '99x5'
+  - series: 'kubelet_volume_stats_available_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="second",job="kubelet"}'
+    values: '1x5'
+  - series: 'kubelet_volume_stats_capacity_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="second",job="kubelet"}'
+    values: '100x5'
+  - series: 'kubelet_volume_stats_used_bytes{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="second",job="kubelet"}'
+    values: '99x5'
+  - series: 'kube_persistentvolumeclaim_access_mode{cluster="cluster",namespace="monitoring",persistentvolumeclaim="shared-pvc",tenant="first",access_mode="ReadOnlyMany"}'
+    values: '1x5'
+  alert_rule_test:
+  - eval_time: 2m
+    alertname: KubePersistentVolumeFillingUp
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster"
+        job: "kubelet"
+        namespace: "monitoring"
+        persistentvolumeclaim: "shared-pvc"
+        severity: "critical"
+        tenant: "second"
+      exp_annotations:
+        description: "The PersistentVolume claimed by shared-pvc in Namespace monitoring on Cluster cluster is only 1% free."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubepersistentvolumefillingup"
+        summary: "PersistentVolume is filling up."
+
+- name: additional grouping isolates multi-cluster resource overcommit alerts
+  interval: 1m
+  input_series:
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="cluster",tenant="first"}'
+    values: '11x15'
+  - series: 'kube_node_status_allocatable{cluster="cluster",tenant="first",node="shared-node",resource="cpu",job="kube-state-metrics"}'
+    values: '10x15'
+  - series: 'kube_node_role{cluster="cluster",tenant="first",node="shared-node",role="control-plane",job="kube-state-metrics"}'
+    values: '1x15'
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="cluster",tenant="second"}'
+    values: '5x15'
+  - series: 'kube_node_status_allocatable{cluster="cluster",tenant="second",node="shared-node",resource="cpu",job="kube-state-metrics"}'
+    values: '10x15'
+  - series: 'kube_node_role{cluster="cluster",tenant="second",node="shared-node",role="control-plane",job="kube-state-metrics"}'
+    values: '1x15'
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: KubeCPUOvercommit
+    exp_alerts:
+    - exp_labels:
+        cluster: "cluster"
+        severity: "warning"
+        tenant: "first"
+      exp_annotations:
+        description: "Cluster cluster has overcommitted CPU resource requests for Pods by 1.00 CPU shares and cannot tolerate node failure."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit"
+        summary: "Cluster has overcommitted CPU resource requests."

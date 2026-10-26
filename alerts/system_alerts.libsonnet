@@ -22,6 +22,20 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
+    local additionalGrouping = utils.rejectGroupingLabels(
+      $._config.additionalGrouping.alertingRules,
+      ['__name__', 'alertname', 'code', 'git_version', 'severity'],
+      'system alerting rules',
+      'additionalGrouping.alertingRules'
+    ),
+    local groupingLabels(labels, excludedAdditionalLabels=[]) =
+      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
+    local config = $._config {
+      groupingVersion: groupingLabels(['git_version', $._config.clusterLabel]),
+      groupingCluster: groupingLabels([$._config.clusterLabel], ['git_version']),
+      groupingClient: groupingLabels([$._config.clusterLabel, 'instance', 'job', 'namespace'], ['code']),
+    },
+
     groups+: [
       {
         name: 'kubernetes-system',
@@ -29,8 +43,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeVersionMismatch',
             expr: |||
-              count by (%(clusterLabel)s) (count by (git_version, %(clusterLabel)s) (label_replace(kubernetes_build_info{%(notKubeDnsCoreDnsSelector)s},"git_version","$1","git_version","(v[0-9]*.[0-9]*).*"))) > 1
-            ||| % $._config,
+              count by (%(groupingCluster)s) (count by (%(groupingVersion)s) (label_replace(kubernetes_build_info{%(notKubeDnsCoreDnsSelector)s},"git_version","$1","git_version","(v[0-9]*.[0-9]*).*"))) > 1
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'warning',
@@ -48,11 +62,11 @@ local utils = import '../lib/utils.libsonnet';
             // this is normal and an expected error, therefore it should be
             // ignored in this alert.
             expr: |||
-              (sum(rate(rest_client_requests_total{%(kubeApiserverSelector)s,code=~"5.."}[5m])) by (%(clusterLabel)s, instance, job, namespace)
+              (sum(rate(rest_client_requests_total{%(kubeApiserverSelector)s,code=~"5.."}[5m])) by (%(groupingClient)s)
                 /
-              sum(rate(rest_client_requests_total{%(kubeApiserverSelector)s}[5m])) by (%(clusterLabel)s, instance, job, namespace))
+              sum(rate(rest_client_requests_total{%(kubeApiserverSelector)s}[5m])) by (%(groupingClient)s))
               > 0.01
-            ||| % $._config,
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'warning',

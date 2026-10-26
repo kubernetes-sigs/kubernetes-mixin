@@ -21,7 +21,12 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
-    local additionalGrouping = utils.withoutLabels($._config.additionalGrouping.recordingRules, ['quantile']),
+    local additionalGrouping = utils.rejectGroupingLabels(
+      $._config.additionalGrouping.recordingRules,
+      ['__name__', 'le', 'quantile'],
+      'kubelet recording rules',
+      'additionalGrouping.recordingRules'
+    ),
     local groupingLabels(labels, excludedAdditionalLabels=[]) =
       utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {

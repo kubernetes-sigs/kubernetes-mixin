@@ -118,7 +118,9 @@
       networkUnitLabel: if self.networkMultiplier == 1 then 'Bytes' else 'Bits',
     },
 
-    // Opt-in to multiCluster dashboards by overriding this and the clusterLabel.
+    // Opt in to multi-cluster dashboards and cluster-aware resource overcommit alerts.
+    // Supported additional alert grouping dimensions are retained by overcommit alerts
+    // only when this is enabled.
     showMultiCluster: false,
     clusterLabel: 'cluster',
 
@@ -158,14 +160,25 @@
 
     // Additional grouping instructions for `by` and `on` expressions.
     additionalGrouping: {
-      // Additional groups for `by` and `on` expressions in recordingRules
+      // Additional groups for existing `by` and `on` expressions in recordingRules.
+      // Expressions without existing grouping or matching remain unchanged.
+      // Labels must already exist on every metric and intermediate rule in a query;
+      // one-sided labels are not propagated with `group_left` or `group_right`.
+      // Generation fails when a grouping-aware rule cannot preserve a configured label.
+      // Generation fails when a configured label is removed by a `without` aggregation.
       recordingRules: [],
 
-      // Additional groups for `by` expressions in alertingRules
+      // Additional groups for existing `by` and required `on` expressions in alertingRules.
+      // Direct expressions, absent alerts, and global single-cluster overcommit expressions
+      // remain unchanged unless an eligible resource alert is wrapped for label enrichment.
+      // Additional grouping labels that are also enrichment payloads stay in group_left()
+      // instead of being appended as matching keys; intrinsic identity keys remain matched.
+      // The same label-presence and no-propagation constraints as recordingRules apply.
+      // Generation fails when a grouping-aware rule cannot preserve a configured label.
+      // Generation fails when a configured label is removed by a `without` aggregation.
+      // Recording-backed alerts also require the label in `recordingRules`.
+      // Resource overcommit alerts apply these groups only when `showMultiCluster` is enabled.
       alertingRules: [],
-
-      // Additional groups for `by` expressions in dashboards
-      dashboards: [],
     },
   },
 }

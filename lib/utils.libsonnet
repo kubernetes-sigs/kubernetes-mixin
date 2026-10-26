@@ -38,6 +38,69 @@
   withoutLabels(labels, excludedLabels):
     [label for label in labels if !std.member(excludedLabels, label)],
 
+  validateGroupingLabels(labels, groupingConfig):
+    local isLetter(char) =
+      (char >= 'a' && char <= 'z') ||
+      (char >= 'A' && char <= 'Z');
+    local isDigit(char) = char >= '0' && char <= '9';
+    local validLabelName(label) =
+      local chars = std.stringChars(label);
+      std.length(chars) > 0 &&
+      (isLetter(chars[0]) || chars[0] == '_') &&
+      std.foldl(
+        function(valid, char) valid && (isLetter(char) || isDigit(char) || char == '_'),
+        chars,
+        true
+      );
+    [
+      if std.type(label) != 'string'
+      then error '%s must contain only Prometheus label name strings, got %s' % [groupingConfig, std.type(label)]
+      else if !validLabelName(label)
+      then error '%s contains an invalid Prometheus label name: %s' % [groupingConfig, label]
+      else label
+      for label in labels
+    ],
+
+  rejectGroupingLabels(labels, rejectedLabels, context, groupingConfig):
+    local validatedLabels = self.validateGroupingLabels(labels, groupingConfig);
+    local conflicts = std.foldl(
+      function(conflicts, label)
+        if std.member(rejectedLabels, label) && !std.member(conflicts, label)
+        then conflicts + [label]
+        else conflicts,
+      validatedLabels,
+      []
+    );
+    if std.length(conflicts) > 0
+    then error '%s contains labels that cannot be preserved in %s: %s' % [groupingConfig, context, std.join(', ', conflicts)]
+    else validatedLabels,
+
+  rejectLabelsExcludedByWithout(labels, excludedLabels, context, groupingConfig='additionalGrouping.alertingRules'):
+    local conflicts = std.foldl(
+      function(conflicts, label)
+        if std.member(excludedLabels, label) && !std.member(conflicts, label)
+        then conflicts + [label]
+        else conflicts,
+      labels,
+      []
+    );
+    if std.length(conflicts) > 0
+    then error '%s contains labels removed by without() aggregations in %s: %s' % [groupingConfig, context, std.join(', ', conflicts)]
+    else labels,
+
+  requireAlertGroupingInRecordingRules(labels, recordingLabels, context):
+    local missing = std.foldl(
+      function(missing, label)
+        if !std.member(recordingLabels, label) && !std.member(missing, label)
+        then missing + [label]
+        else missing,
+      labels,
+      []
+    );
+    if std.length(missing) > 0
+    then error 'additionalGrouping.alertingRules labels used by recording-backed alerts must also be configured in additionalGrouping.recordingRules for %s: %s' % [context, std.join(', ', missing)]
+    else labels,
+
   humanizeSeconds(s)::
     if s > 60 * 60 * 24
     then '%.1f days' % (s / 60 / 60 / 24)
@@ -67,6 +130,14 @@
       on_labels: ['%s' % (if kind == 'job' then 'job_name' else kind), '%s' % config.namespaceLabel, '%s' % config.clusterLabel],
       metric: 'kube_%s_labels' % kind,
     };
+    local additionalMatchingLabels = self.withoutLabels(
+      config.additionalGrouping.alertingRules,
+      labels.join_labels + ['alertname'] + (if std.objectHas(rule, 'labels') then std.objectFields(rule.labels) else [])
+    );
+    local matchingLabels =
+      if std.length(additionalMatchingLabels) == 0
+      then std.join(',', labels.on_labels)
+      else self.groupingLabels(labels.on_labels, additionalMatchingLabels);
 
     // Failed to identify kind - return raw rule
     if kind == 'none' then rule
@@ -78,7 +149,7 @@
         local expr = super.expr,
         expr: '(%(expr)s) * on (%(on)s) group_left(%(join)s) %(metric)s' % {
           expr: expr,
-          on: std.join(',', labels.on_labels),
+          on: matchingLabels,
           join: std.join(',', labels.join_labels),
           metric: labels.metric,
         },

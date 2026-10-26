@@ -250,10 +250,33 @@ TODO
 Kubernetes-mixin can support dashboards across multiple clusters. You need either a multi-cluster [Thanos](https://github.com/improbable-eng/thanos) installation with `external_labels` configured or a [Cortex](https://github.com/cortexproject/cortex) system where a cluster label exists. To enable this feature you need to configure the following:
 
 ```jsonnet
-    // Opt-in to multiCluster dashboards by overriding this and the clusterLabel.
+    // Opt in to multi-cluster dashboards and cluster-aware resource overcommit alerts.
     showMultiCluster: true,
     clusterLabel: '<your cluster label>',
 ```
+
+`showMultiCluster` also selects the cluster-aware resource overcommit alert expressions. These expressions group by the cluster label and supported `additionalGrouping.alertingRules` dimensions. When `showMultiCluster` is `false`, resource overcommit alerts intentionally use global single-cluster aggregations and do not retain additional grouping labels.
+
+Additional dimensions can be retained in recording and alerting rules with:
+
+```jsonnet
+    additionalGrouping+: {
+      recordingRules: ['tenant'],
+      alertingRules: ['tenant'],
+    },
+```
+
+`additionalGrouping.recordingRules` and `additionalGrouping.alertingRules` preserve labels that are already present on the metrics used by a rule. A configured label must be present, with the same meaning, on every metric and intermediate recording rule involved in the relevant aggregations and binary operations. The mixin only adds configured labels to `by(...)` and `on(...)` clauses; it does not copy a label that exists on only one operand by adding `group_left(...)` or `group_right(...)`.
+
+These settings extend only expressions that already surface labels through grouping or matching. They do not introduce grouping into expressions that have no existing `by(...)` or `on(...)` clause, including direct expressions, `absent()` alerts, and the global single-cluster resource overcommit expressions. Those expressions remain unchanged unless an eligible resource-typed application alert is wrapped in a label-enrichment join with a non-empty applicable join-label list. In such a wrapper, additional grouping labels are appended to `on(...)` unless they are also enrichment payload labels. An additional grouping label such as `label_team` that is copied by `group_left(label_team)` is not appended as an additional match key, while the intrinsic resource, namespace, and cluster identity labels remain match keys. When a grouping-aware rule is known to consume, overwrite, or otherwise be unable to preserve a configured label, rendering fails instead of silently omitting that label.
+
+A query-visible label such as `tenant`, when applied consistently to every input series, is a typical use case. The label may come from the metrics themselves or from a query layer such as Thanos; Prometheus external labels alone are not available during local rule evaluation. A metric-specific label such as `owner_name` or `container_id` is not supported when another operand in the same query does not carry it. Configuring such a one-sided label can produce no result or change the cardinality and meaning of the resulting recording or alerting rule.
+
+Labels used by recording-backed alerts must be configured in both lists. Rule generation fails when a configured label would be removed by a `without` aggregation. Resource overcommit alerts retain supported additional dimensions only when `showMultiCluster` is enabled.
+
+The kube-apiserver availability and burn-rate rules keep their existing `or vector(0)` fallbacks for missing bucket and 5xx series. That fallback only applies when the whole operand is empty, so a group that lacks those series gets no availability or burn-rate value, in the same way a cluster does without additional grouping. The Windows node memory utilisation ratio keeps its global `scalar(sum(...))` denominator, because the expression has no `by(...)` or `on(...)` clause to extend.
+
+The bundled dashboards do not support `additionalGrouping.recordingRules`. Dashboard generation is not blocked, but arbitrary dimensions require corresponding Grafana variables and selectors. Without those customizations, two tenants exposing the same cluster, namespace, and pod identity can produce multiple right-hand series for dashboard joins that match only those standard labels. Deployments that need grouped dashboards must provide customized dashboards that select and match every additional dimension.
 
 ## Customising the mixin
 

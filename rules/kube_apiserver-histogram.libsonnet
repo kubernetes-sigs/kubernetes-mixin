@@ -17,7 +17,12 @@ local utils = import '../lib/utils.libsonnet';
 
 {
   prometheusRules+:: {
-    local additionalGrouping = utils.withoutLabels($._config.additionalGrouping.recordingRules, ['verb', 'quantile']),
+    local additionalGrouping = utils.rejectGroupingLabels(
+      $._config.additionalGrouping.recordingRules,
+      ['__name__', 'le', 'quantile', 'verb'],
+      'kube-apiserver histogram recording rules',
+      'additionalGrouping.recordingRules'
+    ),
     local groupingLabels(labels) = utils.groupingLabels(labels, additionalGrouping),
     local verbs = [
       { type: 'read', selector: $._config.kubeApiserverReadSelector },

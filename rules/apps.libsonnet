@@ -22,7 +22,12 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
-    local additionalGrouping = utils.withoutLabels($._config.additionalGrouping.recordingRules, ['workload_type']),
+    local additionalGrouping = utils.rejectGroupingLabels(
+      $._config.additionalGrouping.recordingRules,
+      ['__name__', 'endpoint', 'instance', 'job', 'job_name', 'phase', 'replicaset', 'service', 'workload', 'workload_type'],
+      'application recording rules',
+      'additionalGrouping.recordingRules'
+    ),
     local groupingLabels(labels, excludedAdditionalLabels=[]) =
       utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
