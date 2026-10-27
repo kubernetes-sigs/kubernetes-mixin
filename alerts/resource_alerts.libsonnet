@@ -104,6 +104,11 @@ local utils = import '../lib/utils.libsonnet';
     namespaceOvercommitFactor: 1.5,
     cpuThrottlingPercent: 25,
     cpuThrottlingSelector: '',
+    // Pressure Stall Information (PSI): alert when all of a container's tasks are stalled
+    // on memory or I/O for more than this percentage of the time. Needs the kubelet's
+    // container_pressure_* metrics (KubeletPSI, on by default since Kubernetes v1.34) and cgroup v2.
+    containerMemoryPressurePercent: 10,
+    containerIOPressurePercent: 10,
     // Set this selector for seleting namespaces that contains resources used for overprovision
     // See https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-configure-overprovisioning-with-cluster-autoscaler
     // for more details.
@@ -280,6 +285,44 @@ local utils = import '../lib/utils.libsonnet';
                 utils.ifShowMultiCluster($._config, ' on cluster {{ $labels.%(clusterLabel)s }}' % $._config),
               ],
               summary: 'Processes experience elevated CPU throttling.',
+            },
+          },
+          {
+            alert: 'KubeContainerMemoryPressure',
+            expr: |||
+              max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container) (
+                rate(container_pressure_memory_stalled_seconds_total{container!="", %(cadvisorSelector)s}[5m])
+              )
+              > ( %(containerMemoryPressurePercent)s / 100 )
+            ||| % $._config,
+            'for': '15m',
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was fully stalled on memory {{ $value | humanizePercentage }} of the time%s.' % [
+                utils.ifShowMultiCluster($._config, ' on cluster {{ $labels.%(clusterLabel)s }}' % $._config),
+              ],
+              summary: 'Container is stalled on memory.',
+            },
+          },
+          {
+            alert: 'KubeContainerIOPressure',
+            expr: |||
+              max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container) (
+                rate(container_pressure_io_stalled_seconds_total{container!="", %(cadvisorSelector)s}[5m])
+              )
+              > ( %(containerIOPressurePercent)s / 100 )
+            ||| % $._config,
+            'for': '15m',
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              description: 'Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was fully stalled on I/O {{ $value | humanizePercentage }} of the time%s.' % [
+                utils.ifShowMultiCluster($._config, ' on cluster {{ $labels.%(clusterLabel)s }}' % $._config),
+              ],
+              summary: 'Container is stalled on I/O.',
             },
           },
         ],
