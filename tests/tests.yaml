@@ -1123,6 +1123,78 @@ tests:
   - eval_time: 36m
     alertname: KubeDaemonSetRolloutStuck
 
+- name: Updated number unequal desired with OnDelete update strategy
+  interval: 1m
+  input_series:
+  - series: 'kube_daemonset_status_current_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_number_misscheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '0x40'
+  - series: 'kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '1x40'
+  - series: 'kube_daemonset_status_number_available{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '4x40'
+  - series: 'kube_daemonset_spec_update_strategy{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete",strategy="OnDelete"}'
+    values: '1x40'
+  - series: 'kube_daemonset_status_current_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_number_misscheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling"}'
+    values: '0x40'
+  - series: 'kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling"}'
+    values: '1x40'
+  - series: 'kube_daemonset_status_number_available{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling"}'
+    values: '4x40'
+  - series: 'kube_daemonset_spec_update_strategy{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="rolling",strategy="RollingUpdate"}'
+    values: '1x40'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: KubeDaemonSetRolloutStuck
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: monitoring
+        cluster: kubernetes
+        daemonset: rolling
+        severity: warning
+      exp_annotations:
+        summary: "DaemonSet rollout is stuck."
+        description: 'DaemonSet monitoring/rolling has not finished or progressed for at least 15m.'
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+
+- name: Number available unequal desired with OnDelete update strategy
+  interval: 1m
+  input_series:
+  - series: 'kube_daemonset_status_current_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_desired_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '4x40'
+  - series: 'kube_daemonset_status_number_misscheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '0x40'
+  - series: 'kube_daemonset_status_updated_number_scheduled{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '1x40'
+  - series: 'kube_daemonset_status_number_available{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete"}'
+    values: '3x40'
+  - series: 'kube_daemonset_spec_update_strategy{job="kube-state-metrics",cluster="kubernetes",namespace="monitoring",daemonset="ondelete",strategy="OnDelete"}'
+    values: '1x40'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: KubeDaemonSetRolloutStuck
+    exp_alerts:
+    - exp_labels:
+        job: kube-state-metrics
+        namespace: monitoring
+        cluster: kubernetes
+        daemonset: ondelete
+        severity: warning
+      exp_annotations:
+        summary: "DaemonSet rollout is stuck."
+        description: 'DaemonSet monitoring/ondelete has not finished or progressed for at least 15m.'
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubedaemonsetrolloutstuck
+
 - interval: 1m
   input_series:
   - series: 'kubelet_certificate_manager_client_ttl_seconds{job="kubelet",cluster="kubernetes",namespace="monitoring",node="minikube"}'
