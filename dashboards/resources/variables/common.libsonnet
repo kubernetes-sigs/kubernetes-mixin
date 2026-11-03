@@ -57,10 +57,11 @@ local var = g.dashboard.variable;
   pod(config, datasourceVar)::
     var.query.new('pod')
     + var.query.withDatasourceFromVariable(datasourceVar)
-    + var.query.queryTypes.withLabelValues(
-      'pod',
-      'kube_pod_info{%(kubeStateMetricsSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace"}' % config,
+    // Metadata can retain deleted pods outside the dashboard's time range.
+    + var.query.queryTypes.withQueryResult(
+      'count by (pod) (count_over_time(kube_pod_info{%(kubeStateMetricsSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace"}[${__range_s}s]))' % config,
     )
+    + var.query.withRegex('/pod="([^"]+)"/')
     + var.query.generalOptions.withLabel('pod')
     + var.query.refresh.onTime()
     + var.query.generalOptions.showOnDashboard.withLabelAndValue()
