@@ -227,9 +227,15 @@ local utils = import '../lib/utils.libsonnet';
                     !=
                   0
                 ) or (
-                  kube_daemonset_status_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
-                    !=
-                  kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+                  (
+                    kube_daemonset_status_updated_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+                      !=
+                    kube_daemonset_status_desired_number_scheduled{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+                  )
+                  # With the OnDelete strategy, pods are only replaced when they are deleted,
+                  # so pods running an older template are expected and not a stuck rollout.
+                  unless on(namespace, daemonset, job, %(clusterLabel)s)
+                  kube_daemonset_spec_update_strategy{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, strategy="OnDelete"}
                 ) or (
                   kube_daemonset_status_number_available{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                     !=
