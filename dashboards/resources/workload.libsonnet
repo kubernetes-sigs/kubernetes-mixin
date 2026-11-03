@@ -130,9 +130,9 @@ local timeSeries = g.panel.timeSeries;
               pod: 'Pod',
               'Value #A': 'CPU Usage',
               'Value #B': 'CPU Requests',
-              'Value #C': 'CPU Requests %',
+              'Value #C': 'CPU Usage/Requests %',
               'Value #D': 'CPU Limits',
-              'Value #E': 'CPU Limits %',
+              'Value #E': 'CPU Usage/Limits %',
             },
           }),
         ])
@@ -226,9 +226,9 @@ local timeSeries = g.panel.timeSeries;
               pod: 'Pod',
               'Value #A': 'Memory Usage',
               'Value #B': 'Memory Requests',
-              'Value #C': 'Memory Requests %',
+              'Value #C': 'Memory Usage/Requests %',
               'Value #D': 'Memory Limits',
-              'Value #E': 'Memory Limits %',
+              'Value #E': 'Memory Usage/Limits %',
             },
           }),
         ])
