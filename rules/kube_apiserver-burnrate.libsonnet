@@ -17,16 +17,13 @@ local utils = import '../lib/utils.libsonnet';
 
 {
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.recordingRules,
-      ['__name__', 'code', 'le', 'resource', 'scope', 'verb'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'kube-apiserver burn-rate recording rules',
-      'additionalGrouping.recordingRules'
+      ['code', 'le', 'resource', 'scope', 'verb']
     ),
-    local groupingCluster = utils.groupingLabels(
-      [$._config.clusterLabel],
-      additionalGrouping
-    ),
+    local groupingCluster = grouping.by([$._config.clusterLabel]),
     local unitSeconds = {
       ms: 0.001,
       s: 1,

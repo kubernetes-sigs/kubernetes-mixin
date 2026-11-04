@@ -33,25 +33,21 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.alertingRules,
-      ['__name__', 'alertname', 'condition', 'instance', 'job', 'le', 'node', 'resource', 'severity', 'status', 'unit'],
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
       'kubelet alerting rules',
-      'additionalGrouping.alertingRules'
+      ['condition', 'instance', 'job', 'le', 'node', 'resource', 'status', 'unit']
     ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
-      groupingClusterNode: groupingLabels([$._config.clusterLabel, 'node'], ['condition', 'status']),
-      groupingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance'], ['node', 'resource', 'unit']),
-      matchingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance'], ['eviction_signal', 'le', 'node', 'operation_type']),
-      groupingClusterInstanceNode: groupingLabels([$._config.clusterLabel, 'instance', 'node'], ['eviction_signal', 'le', 'operation_type', 'resource', 'unit']),
-      groupingClusterNodeCapacity: groupingLabels([$._config.clusterLabel, 'node'], ['instance', 'job', 'resource', 'unit']),
-      matchingClusterNodeCapacity: groupingLabels([$._config.clusterLabel, 'node'], ['instance', 'job', 'resource', 'unit']),
-      groupingClusterEvictionSignalInstance: groupingLabels([$._config.clusterLabel, 'eviction_signal', 'instance'], ['node']),
-      groupingClusterInstanceLe: groupingLabels([$._config.clusterLabel, 'instance', 'le'], ['node']),
-      groupingClusterInstanceLeOperationType: groupingLabels([$._config.clusterLabel, 'instance', 'le', 'operation_type'], ['node']),
-      groupingCluster: groupingLabels([$._config.clusterLabel], ['instance', 'job', 'node']),
+      groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
+      groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
+      matchingClusterInstance: grouping.by([$._config.clusterLabel, 'instance'], ['eviction_signal', 'operation_type']),
+      groupingClusterInstanceNode: grouping.by([$._config.clusterLabel, 'instance', 'node'], ['eviction_signal', 'operation_type']),
+      groupingClusterEvictionSignalInstance: grouping.by([$._config.clusterLabel, 'eviction_signal', 'instance']),
+      groupingClusterInstanceLe: grouping.by([$._config.clusterLabel, 'instance', 'le']),
+      groupingClusterInstanceLeOperationType: grouping.by([$._config.clusterLabel, 'instance', 'le', 'operation_type']),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
     },
 
     groups+: [
@@ -126,8 +122,8 @@ local utils = import '../lib/utils.libsonnet';
                   kubelet_node_name{%(kubeletSelector)s}
                 )
               )
-              / on (%(matchingClusterNodeCapacity)s) group_left()
-              max by (%(groupingClusterNodeCapacity)s) (
+              / on (%(groupingClusterNode)s) group_left()
+              max by (%(groupingClusterNode)s) (
                 kube_node_status_capacity{%(kubeStateMetricsSelector)s, resource="pods"} != 1
               ) > 0.95
             ||| % config,
@@ -184,15 +180,10 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeletPlegDurationHigh',
             expr:
-              local recordingBackedGrouping = utils.withoutLabels(
-                additionalGrouping,
-                [$._config.clusterLabel, 'instance', 'node', 'quantile', 'le']
-              );
-              assert utils.requireAlertGroupingInRecordingRules(
-                recordingBackedGrouping,
-                $._config.additionalGrouping.recordingRules,
+              assert std.isArray(grouping.requireRecorded(
+                [$._config.clusterLabel, 'instance', 'node', 'quantile', 'le'],
                 'KubeletPlegDurationHigh'
-              ) == recordingBackedGrouping;
+              ));
               |||
                 node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
               ||| % $._config,

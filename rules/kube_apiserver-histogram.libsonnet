@@ -17,13 +17,12 @@ local utils = import '../lib/utils.libsonnet';
 
 {
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.recordingRules,
-      ['__name__', 'le', 'quantile', 'verb'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'kube-apiserver histogram recording rules',
-      'additionalGrouping.recordingRules'
+      ['le', 'quantile', 'verb']
     ),
-    local groupingLabels(labels) = utils.groupingLabels(labels, additionalGrouping),
     local verbs = [
       { type: 'read', selector: $._config.kubeApiserverReadSelector },
       { type: 'write', selector: $._config.kubeApiserverWriteSelector },
@@ -38,7 +37,7 @@ local utils = import '../lib/utils.libsonnet';
               record: 'cluster_quantile:apiserver_request_sli_duration_seconds:histogram_quantile',
               expr: |||
                 histogram_quantile(0.99, sum by (%s) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
-              ||| % [groupingLabels([$._config.clusterLabel, 'le', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
+              ||| % [grouping.by([$._config.clusterLabel, 'le', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
               labels: {
                 verb: verb.type,
                 quantile: '0.99',

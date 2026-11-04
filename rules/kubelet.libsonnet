@@ -21,19 +21,17 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.recordingRules,
-      ['__name__', 'le', 'quantile'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'kubelet recording rules',
-      'additionalGrouping.recordingRules'
+      ['le', 'quantile']
     ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
-      groupingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance']),
-      groupingClusterInstanceLe: groupingLabels([$._config.clusterLabel, 'instance', 'le']),
-      groupingClusterInstanceNode: groupingLabels([$._config.clusterLabel, 'instance', 'node']),
-      matchingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance'], ['le', 'node', 'operation_type']),
+      groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
+      groupingClusterInstanceLe: grouping.by([$._config.clusterLabel, 'instance', 'le']),
+      groupingClusterInstanceNode: grouping.by([$._config.clusterLabel, 'instance', 'node']),
+      matchingClusterInstance: grouping.by([$._config.clusterLabel, 'instance'], ['node', 'operation_type']),
     },
 
     groups+: [

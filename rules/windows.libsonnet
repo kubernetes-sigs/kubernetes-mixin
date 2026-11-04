@@ -17,27 +17,23 @@ local utils = import '../lib/utils.libsonnet';
 
 {
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.recordingRules,
-      ['__name__', 'container_id', 'core', 'endpoint', 'instance', 'job', 'service'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'Windows recording rules',
-      'additionalGrouping.recordingRules'
-    ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) = utils.groupingLabels(
-      labels,
-      utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)
+      ['container_id', 'core', 'endpoint', 'instance', 'job', 'service']
     ),
     local config = $._config {
-      groupingCluster: groupingLabels([$._config.clusterLabel]),
-      groupingClusterInstance: groupingLabels([$._config.clusterLabel, 'instance']),
-      groupingClusterInstanceCore: groupingLabels([$._config.clusterLabel, 'instance', 'core']),
-      groupingClusterInstanceVolume: groupingLabels([$._config.clusterLabel, 'instance', 'volume']),
-      groupingContainerIdCluster: groupingLabels(['container_id', $._config.clusterLabel]),
-      groupingContainerContainerIdPodNamespaceCluster: groupingLabels(['container', 'container_id', 'pod', 'namespace', $._config.clusterLabel]),
-      groupingClusterNamespacePodContainer: groupingLabels([$._config.clusterLabel, 'namespace', 'pod', 'container']),
-      groupingContainerPodNamespaceCluster: groupingLabels(['container', 'pod', 'namespace', $._config.clusterLabel]),
-      matchingContainerIdCluster: groupingLabels(['container_id', $._config.clusterLabel], ['container', 'pod', 'namespace']),
-      matchingContainerPodNamespaceCluster: groupingLabels(['container', 'pod', 'namespace', $._config.clusterLabel], ['resource', 'unit']),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
+      groupingClusterInstanceCore: grouping.by([$._config.clusterLabel, 'instance', 'core']),
+      groupingClusterInstanceVolume: grouping.by([$._config.clusterLabel, 'instance', 'volume']),
+      groupingContainerIdCluster: grouping.by(['container_id', $._config.clusterLabel]),
+      groupingContainerContainerIdPodNamespaceCluster: grouping.by(['container', 'container_id', 'pod', 'namespace', $._config.clusterLabel]),
+      groupingClusterNamespacePodContainer: grouping.by([$._config.clusterLabel, 'namespace', 'pod', 'container']),
+      groupingContainerPodNamespaceCluster: grouping.by(['container', 'pod', 'namespace', $._config.clusterLabel]),
+      matchingContainerIdCluster: grouping.by(['container_id', $._config.clusterLabel], ['container', 'pod', 'namespace']),
+      matchingContainerPodNamespaceCluster: grouping.by(['container', 'pod', 'namespace', $._config.clusterLabel], ['resource', 'unit']),
     },
 
     groups+: [

@@ -88,14 +88,6 @@ assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_events:rate500ms');
 assert averagedRecords(exoticRules) == std.set(['apiserver_request:burnrate2w']);
 
-// Grouping labels keep the query-specific order, append additional labels in their configured
-// order, and omit labels that have already appeared in either list.
-assert utils.groupingLabels(
-  ['cluster', 'namespace'],
-  ['tenant', 'namespace', 'tenant']
-) == 'cluster, namespace, tenant';
-assert utils.withoutLabels(['tenant', 'namespace', 'tenant'], ['namespace']) == ['tenant', 'tenant'];
-
 // Valid Prometheus label-name boundaries remain accepted on both configuration paths.
 local validGroupingLabels = mixin {
   _config+:: {
@@ -107,6 +99,21 @@ local validGroupingLabels = mixin {
 };
 assert std.length(validGroupingLabels.prometheusRules.groups) > 0;
 assert std.length(validGroupingLabels.prometheusAlerts.groups) > 0;
+
+// Overriding additionalGrouping without `+` leaves the lists it does not define empty, and the
+// label-enrichment wrapper works with a configuration that has no additionalGrouping at all.
+local replacedGrouping(additionalGrouping) = mixin {
+  _config+:: {
+    additionalGrouping: additionalGrouping,
+  },
+};
+assert std.length(replacedGrouping({ recordingRules: ['tenant'] }).prometheusRules.groups) > 0;
+assert std.length(replacedGrouping({ recordingRules: ['tenant'] }).prometheusAlerts.groups) > 0;
+assert std.length(replacedGrouping({}).prometheusAlerts.groups) > 0;
+assert utils.wrap_rule_for_labels(
+  { alert: 'KubePodCrashLooping', expr: 'up' },
+  { pods_join_labels: ['label_team'], namespaceLabel: 'namespace', clusterLabel: 'cluster' }
+).expr == '(up) * on (pod,namespace,cluster) group_left(label_team) kube_pod_labels';
 
 local additionalGrouping = (mixin + (import '../rules/windows.libsonnet')) {
   _config+:: {
@@ -147,8 +154,8 @@ assert std.length(std.findSubstr('sum by (cluster, node, owner_name, owner_kind,
 local conflictingKubelet = findRule(conflictingGrouping.prometheusRules.groups, 'node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile');
 assert std.length(std.findSubstr('on(cluster, instance, owner_name, owner_kind, container, pod, namespace) group_left (node)', conflictingKubelet.expr)) == 1;
 local conflictingNodeCPU = findRule(conflictingGrouping.prometheusRules.groups, 'node:node_num_cpu:sum');
-assert std.length(std.findSubstr('on (cluster, namespace, pod, owner_name, owner_kind, container) group_left(node)', conflictingNodeCPU.expr)) == 1;
-assert std.length(std.findSubstr('topk by(cluster, namespace, pod, owner_name, owner_kind, container)', conflictingNodeCPU.expr)) == 1;
+assert std.length(std.findSubstr('on (cluster, namespace, pod, owner_name, owner_kind) group_left(node)', conflictingNodeCPU.expr)) == 1;
+assert std.length(std.findSubstr('topk by(cluster, namespace, pod, owner_name, owner_kind)', conflictingNodeCPU.expr)) == 1;
 local conflictingPodPhase = findRule(conflictingGrouping.prometheusRules.groups, 'cluster:namespace:pod_memory:active:kube_pod_container_resource_requests');
 assert std.length(std.findSubstr('on (namespace, pod, cluster, owner_name, owner_kind)', conflictingPodPhase.expr)) == 1;
 local conflictingPodOwners = findRules(conflictingGrouping.prometheusRules.groups, 'namespace_workload_pod:kube_pod_owner:relabel');

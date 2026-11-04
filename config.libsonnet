@@ -163,7 +163,8 @@
       // Additional groups for existing `by` and `on` expressions in recordingRules.
       // Expressions without existing grouping or matching remain unchanged.
       // Labels must already exist on every metric and intermediate rule in a query;
-      // one-sided labels are not propagated with `group_left` or `group_right`.
+      // one-sided labels are not propagated with `group_left` or `group_right`, except where a
+      // rule already joins the label from one side and keeps it out of the matching labels.
       // Generation fails when a grouping-aware rule cannot preserve a configured label.
       // Generation fails when a configured label is removed by a `without` aggregation.
       recordingRules: [],

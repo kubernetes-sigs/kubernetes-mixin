@@ -24,36 +24,21 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    local configuredAdditionalGrouping = utils.rejectLabelsExcludedByWithout(
-      $._config.additionalGrouping.alertingRules,
-      [$._config.namespaceLabel, 'service', 'endpoint'],
-      'kube-apiserver alerts'
-    ),
-    local additionalGrouping = utils.rejectGroupingLabels(
-      configuredAdditionalGrouping,
-      ['__name__', 'alertname', 'code', 'le', 'severity'] +
-      if std.length($._config.SLOs.apiserver.windows) > 0
-      then ['long', 'resource', 'scope', 'short']
-      else [],
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
       'kube-apiserver alerting rules',
-      'additionalGrouping.alertingRules'
+      ['code', 'le', 'long', 'resource', 'scope', 'short'],
+      [$._config.namespaceLabel, 'service', 'endpoint']
     ),
-    local burnrateAdditionalGrouping =
-      local recordingBackedGrouping = utils.withoutLabels(additionalGrouping, [$._config.clusterLabel, 'verb']);
-      assert utils.requireAlertGroupingInRecordingRules(
-        recordingBackedGrouping,
-        $._config.additionalGrouping.recordingRules,
-        'KubeAPIErrorBudgetBurn'
-      ) == recordingBackedGrouping;
-      additionalGrouping,
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
+    // The burn-rate alert reads recording rules, so its labels must be recorded too. The check
+    // also applies when no SLO windows are configured.
+    assert std.isArray(grouping.requireRecorded([$._config.clusterLabel, 'verb'], 'KubeAPIErrorBudgetBurn')),
     local config = $._config {
-      groupingCluster: groupingLabels([$._config.clusterLabel]),
-      groupingBurnrate: utils.groupingLabels([$._config.clusterLabel], burnrateAdditionalGrouping),
-      matchingCertificate: groupingLabels(['job', $._config.clusterLabel, 'instance']),
-      groupingAggregatedAPIErrors: groupingLabels([$._config.clusterLabel, 'instance', 'name', 'reason']),
-      groupingAggregatedAPIDown: groupingLabels(['name', 'namespace', $._config.clusterLabel]),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      matchingCertificate: grouping.by(['job', $._config.clusterLabel, 'instance']),
+      groupingAggregatedAPIErrors: grouping.by([$._config.clusterLabel, 'instance', 'name', 'reason']),
+      groupingAggregatedAPIDown: grouping.by(['name', 'namespace', $._config.clusterLabel]),
     },
 
     groups+: [
@@ -67,12 +52,12 @@ local utils = import '../lib/utils.libsonnet';
               and on(%s)
               sum by(%s) (apiserver_request:burnrate%s) > (%.2f * %.5f)
             ||| % [
-              config.groupingBurnrate,
+              config.groupingCluster,
               w.long,
               w.factor,
               (1 - $._config.SLOs.apiserver.target),
-              config.groupingBurnrate,
-              config.groupingBurnrate,
+              config.groupingCluster,
+              config.groupingCluster,
               w.short,
               w.factor,
               (1 - $._config.SLOs.apiserver.target),

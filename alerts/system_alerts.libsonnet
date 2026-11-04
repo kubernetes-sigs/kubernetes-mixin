@@ -22,18 +22,16 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.alertingRules,
-      ['__name__', 'alertname', 'code', 'git_version', 'severity'],
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
       'system alerting rules',
-      'additionalGrouping.alertingRules'
+      ['code', 'git_version']
     ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
-      groupingVersion: groupingLabels(['git_version', $._config.clusterLabel]),
-      groupingCluster: groupingLabels([$._config.clusterLabel], ['git_version']),
-      groupingClient: groupingLabels([$._config.clusterLabel, 'instance', 'job', 'namespace'], ['code']),
+      groupingVersion: grouping.by(['git_version', $._config.clusterLabel]),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      groupingClient: grouping.by([$._config.clusterLabel, 'instance', 'job', 'namespace']),
     },
 
     groups+: [

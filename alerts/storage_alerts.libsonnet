@@ -37,17 +37,15 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.alertingRules,
-      ['__name__', 'access_mode', 'alertname', 'severity'],
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
       'storage alerting rules',
-      'additionalGrouping.alertingRules'
+      ['access_mode']
     ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
-      matchingPersistentVolumeClaimAccessMode: groupingLabels([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim'], ['access_mode']),
-      matchingPersistentVolumeClaimLabels: groupingLabels([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim'], ['label_excluded_from_alerts']),
+      matchingPersistentVolumeClaimAccessMode: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim']),
+      matchingPersistentVolumeClaimLabels: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim'], ['label_excluded_from_alerts']),
     },
 
     groups+: [

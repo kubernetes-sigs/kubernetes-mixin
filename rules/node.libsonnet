@@ -23,27 +23,19 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      utils.rejectLabelsExcludedByWithout(
-        $._config.additionalGrouping.recordingRules,
-        ['mode'],
-        'node rules',
-        'additionalGrouping.recordingRules'
-      ),
-      ['__name__', 'cpu', 'endpoint', 'instance', 'job', 'service'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'node recording rules',
-      'additionalGrouping.recordingRules'
-    ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) = utils.groupingLabels(
-      labels,
-      utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)
+      ['cpu', 'endpoint', 'instance', 'job', 'service'],
+      ['mode']
     ),
     local config = $._config {
-      groupingCluster: groupingLabels([$._config.clusterLabel]),
-      groupingClusterNode: groupingLabels([$._config.clusterLabel, 'node']),
-      groupingClusterNamespacePod: groupingLabels([$._config.clusterLabel, 'namespace', $._config.podLabel]),
-      groupingClusterNodeNamespacePod: groupingLabels([$._config.clusterLabel, 'node', 'namespace', $._config.podLabel]),
-      matchingClusterNamespacePod: groupingLabels([$._config.clusterLabel, 'namespace', $._config.podLabel], ['cpu', 'mode', 'node']),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
+      groupingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', $._config.podLabel]),
+      groupingClusterNodeNamespacePod: grouping.by([$._config.clusterLabel, 'node', 'namespace', $._config.podLabel]),
+      matchingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', $._config.podLabel], ['container', 'node']),
     },
 
     groups+: [

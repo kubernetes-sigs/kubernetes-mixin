@@ -26,28 +26,25 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.alertingRules,
-      ['__name__', 'alertname', 'condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'revision', 'severity', 'status'],
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
       'application alerting rules',
-      'additionalGrouping.alertingRules'
+      ['condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'revision', 'status']
     ),
-    local groupingLabels(labels, excludedAdditionalLabels=[]) =
-      utils.groupingLabels(labels, utils.withoutLabels(additionalGrouping, excludedAdditionalLabels)),
     local config = $._config {
-      groupingNamespacePodJobCluster: groupingLabels(['namespace', 'pod', 'job', $._config.clusterLabel], ['condition', 'owner_kind', 'phase', 'reason']),
-      groupingNamespacePodOwnerKindCluster: groupingLabels(['namespace', 'pod', 'owner_kind', $._config.clusterLabel], ['condition', 'job', 'phase', 'reason']),
-      matchingNamespacePodCluster: groupingLabels(['namespace', 'pod', $._config.clusterLabel], ['condition', 'job', 'owner_kind', 'phase', 'reason']),
-      groupingNamespaceStatefulsetJobCluster: groupingLabels(['namespace', 'statefulset', 'job', $._config.clusterLabel]),
-      matchingNamespaceStatefulsetJobCluster: groupingLabels(['namespace', 'statefulset', 'job', $._config.clusterLabel], ['revision']),
-      groupingNamespaceJobNameCluster: groupingLabels(['namespace', 'job_name', $._config.clusterLabel], ['label_excluded_from_alerts']),
-      matchingNamespaceHorizontalpodautoscalerCluster: groupingLabels(['namespace', 'horizontalpodautoscaler', $._config.clusterLabel], ['condition', 'status']),
+      groupingNamespacePodJobCluster: grouping.by(['namespace', 'pod', 'job', $._config.clusterLabel]),
+      groupingNamespacePodOwnerKindCluster: grouping.by(['namespace', 'pod', 'owner_kind', $._config.clusterLabel], ['job']),
+      matchingNamespacePodCluster: grouping.by(['namespace', 'pod', $._config.clusterLabel], ['job']),
+      groupingNamespaceStatefulsetJobCluster: grouping.by(['namespace', 'statefulset', 'job', $._config.clusterLabel]),
+      groupingNamespaceJobNameCluster: grouping.by(['namespace', 'job_name', $._config.clusterLabel]),
+      matchingNamespaceHorizontalpodautoscalerCluster: grouping.by(['namespace', 'horizontalpodautoscaler', $._config.clusterLabel]),
     },
 
     groups+: [
       {
         name: 'kubernetes-apps',
-        rules: [utils.wrap_rule_for_labels(rule, $._config) for rule in self.rules_],
+        rules: [utils.wrap_rule_for_labels(rule, $._config, grouping.labels) for rule in self.rules_],
         rules_:: [
           {
             expr: |||
@@ -208,13 +205,13 @@ local utils = import '../lib/utils.libsonnet';
                     unless
                   kube_statefulset_status_update_revision{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 )
-                  * on(%(matchingNamespaceStatefulsetJobCluster)s)
+                  * on(%(groupingNamespaceStatefulsetJobCluster)s)
                 (
                   kube_statefulset_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                     !=
                   kube_statefulset_status_replicas_updated{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 )
-              )  and on(%(matchingNamespaceStatefulsetJobCluster)s) (
+              )  and on(%(groupingNamespaceStatefulsetJobCluster)s) (
                 changes(kube_statefulset_status_replicas_updated{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[5m])
                   ==
                 0

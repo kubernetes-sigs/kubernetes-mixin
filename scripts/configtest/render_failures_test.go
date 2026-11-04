@@ -69,28 +69,23 @@ const (
 	alertsOutput = "prometheusAlerts"
 )
 
+// alertSelectors are the selectors the alert modules require, so a module renders on its own.
+const alertSelectors = `kubeStateMetricsSelector: 'job="kube-state-metrics"',
+    kubeletSelector: 'job="kubelet"',
+    kubeApiserverSelector: 'job="kube-apiserver"',
+    nodeExporterSelector: 'job="node-exporter"',
+    kubeJobTimeoutDuration: '10800',`
+
+// noAPIWindows disables the API server SLOs, so KubeAPIErrorBudgetBurn is not rendered.
+const noAPIWindows = "SLOs+: { apiserver+: { windows: [] } },"
+
 var (
+	// The full mixin only reports errors that name no module, because several modules can reject
+	// the same label and which one reports first depends on evaluation order.
 	fullRecording = fixture{imports: []string{"mixin.libsonnet"}, recording: true, output: rulesOutput}
 	fullAlerting  = fixture{imports: []string{"mixin.libsonnet"}, alerting: true, output: alertsOutput}
 
-	// Without API SLO windows KubeAPIErrorBudgetBurn is not rendered, so the dependency check
-	// for the recording-backed kubelet alert has to hold on its own.
-	fullNoAPIWindowsAlerting = fixture{
-		imports:  []string{"mixin.libsonnet"},
-		config:   "SLOs+: { apiserver+: { windows: [] } },",
-		alerting: true,
-		output:   alertsOutput,
-	}
-
-	multiClusterAlerting = fixture{
-		imports:   []string{"mixin.libsonnet"},
-		config:    "showMultiCluster: true,",
-		recording: true,
-		alerting:  true,
-		output:    alertsOutput,
-	}
-
-	// The remaining fixtures render one module in isolation, so a conflict in another module
+	// Every other fixture renders one module in isolation, so a conflict in another module
 	// cannot satisfy or mask the expected error.
 	appsRules      = isolatedRules("rules/apps.libsonnet")
 	nodeRules      = isolatedRules("rules/node.libsonnet")
@@ -98,14 +93,18 @@ var (
 	windowsRules   = isolatedRules("rules/windows.libsonnet")
 	schedulerRules = isolatedRules("rules/kube_scheduler.libsonnet")
 
-	isolatedKubeletAlerts = fixture{
-		imports: []string{"config.libsonnet", "alerts/kubelet.libsonnet"},
-		config: `kubeStateMetricsSelector: 'job="kube-state-metrics"',
-    kubeletSelector: 'job="kubelet"',`,
+	apiserverAvailabilityRules = fixture{
+		imports:   []string{"config.libsonnet", "rules/kube_apiserver-config.libsonnet", "rules/kube_apiserver-availability.libsonnet"},
 		recording: true,
-		alerting:  true,
-		output:    alertsOutput,
+		output:    rulesOutput,
 	}
+
+	appsAlerts     = isolatedAlerts("alerts/apps_alerts.libsonnet")
+	apiserverAlert = isolatedAlerts("alerts/kube_apiserver.libsonnet")
+	kubeletAlerts  = isolatedAlerts("alerts/kubelet.libsonnet")
+	resourceAlerts = isolatedAlerts("alerts/resource_alerts.libsonnet")
+	storageAlerts  = isolatedAlerts("alerts/storage_alerts.libsonnet")
+	systemAlerts   = isolatedAlerts("alerts/system_alerts.libsonnet")
 )
 
 func isolatedRules(module string) fixture {
@@ -114,6 +113,28 @@ func isolatedRules(module string) fixture {
 		recording: true,
 		output:    rulesOutput,
 	}
+}
+
+// isolatedAlerts adds the label to both lists. Use alertingOnly to leave the recording rules
+// without it.
+func isolatedAlerts(module string) fixture {
+	return fixture{
+		imports:   []string{"config.libsonnet", module},
+		config:    alertSelectors,
+		recording: true,
+		alerting:  true,
+		output:    alertsOutput,
+	}
+}
+
+func (f fixture) alertingOnly() fixture {
+	f.recording = false
+	return f
+}
+
+func (f fixture) withConfig(config string) fixture {
+	f.config += "\n    " + config
+	return f
 }
 
 type testCase struct {
@@ -145,30 +166,33 @@ func cases() []testCase {
 	}
 
 	// Labels removed by a `without()` aggregation can never reach the result.
-	add("fullRecording", fullRecording, "mode", recordingWithout+"node rules: mode")
-	add("schedulerRules", schedulerRules, "instance", recordingWithout+"kube-scheduler rules: instance")
-	add("schedulerRules", schedulerRules, "pod", recordingWithout+"kube-scheduler rules: pod")
+	add("nodeRules", nodeRules, "mode", recordingWithout+"node recording rules: mode")
+	add("schedulerRules", schedulerRules, "instance", recordingWithout+"kube-scheduler recording rules: instance")
+	add("schedulerRules", schedulerRules, "pod", recordingWithout+"kube-scheduler recording rules: pod")
 	cases = append(cases, testCase{
 		fixtureName: "schedulerRulesCustomPodLabel",
 		fixture:     schedulerRules,
 		label:       "scheduler_pod",
 		config:      "podLabel: 'scheduler_pod',",
-		want:        recordingWithout + "kube-scheduler rules: scheduler_pod",
+		want:        recordingWithout + "kube-scheduler recording rules: scheduler_pod",
 	})
-	add("fullAlerting", fullAlerting, "job", alertingWithout+"kubernetes-resources alerts: job")
-	add("fullAlerting", fullAlerting, "service", alertingWithout+"kube-apiserver alerts: service")
+	add("resourceAlerts", resourceAlerts, "job", alertingWithout+"kubernetes-resources alerting rules: job")
+	add("apiserverAlerts", apiserverAlert, "service", alertingWithout+"kube-apiserver alerting rules: service")
 
 	// Alerts that read recording rules need the label in the recording rules as well.
-	add("fullAlerting", fullAlerting, "tenant", recordingBacked+"KubeAPIErrorBudgetBurn: tenant")
-	add("fullNoAPIWindowsAlerting", fullNoAPIWindowsAlerting, "tenant", recordingBacked+"KubeletPlegDurationHigh: tenant")
+	add("apiserverAlertsAlertingOnly", apiserverAlert.alertingOnly(), "tenant", recordingBacked+"KubeAPIErrorBudgetBurn: tenant")
+	add("kubeletAlertsAlertingOnly", kubeletAlerts.alertingOnly(), "tenant", recordingBacked+"KubeletPlegDurationHigh: tenant")
+	add("apiserverAlertsNoWindowsAlertingOnly", apiserverAlert.alertingOnly().withConfig(noAPIWindows), "tenant", recordingBacked+"KubeAPIErrorBudgetBurn: tenant")
+	add("resourceAlertsAlertingOnly", resourceAlerts.alertingOnly(), "tenant", recordingBacked+"KubeCPUOvercommit and KubeMemoryOvercommit: tenant")
+	add("resourceAlertsMultiClusterAlertingOnly", resourceAlerts.alertingOnly().withConfig("showMultiCluster: true,"), "tenant", recordingBacked+"KubeCPUOvercommit and KubeMemoryOvercommit: tenant")
 
 	// Labels that a recording rule consumes or overwrites cannot be preserved.
-	add("fullRecording", fullRecording, "workload_type", recordingPreserved+"application recording rules: workload_type")
-	add("fullRecording", fullRecording, "workload", recordingPreserved+"application recording rules: workload")
-	add("fullRecording", fullRecording, "replicaset", recordingPreserved+"application recording rules: replicaset")
-	add("fullRecording", fullRecording, "job_name", recordingPreserved+"application recording rules: job_name")
-	add("fullRecording", fullRecording, "verb", recordingPreserved+"kube-apiserver availability recording rules: verb")
-	add("fullRecording", fullRecording, "cpu", recordingPreserved+"node recording rules: cpu")
+	add("appsRules", appsRules, "workload_type", recordingPreserved+"application recording rules: workload_type")
+	add("appsRules", appsRules, "workload", recordingPreserved+"application recording rules: workload")
+	add("appsRules", appsRules, "replicaset", recordingPreserved+"application recording rules: replicaset")
+	add("appsRules", appsRules, "job_name", recordingPreserved+"application recording rules: job_name")
+	add("apiserverAvailabilityRules", apiserverAvailabilityRules, "verb", recordingPreserved+"kube-apiserver availability recording rules: verb")
+	add("nodeRules", nodeRules, "cpu", recordingPreserved+"node recording rules: cpu")
 	add("kubeletRules", kubeletRules, "le", recordingPreserved+"kubelet recording rules: le")
 	add("windowsRules", windowsRules, "core", recordingPreserved+"Windows recording rules: core")
 	add("windowsRules", windowsRules, "container_id", recordingPreserved+"Windows recording rules: container_id")
@@ -181,14 +205,17 @@ func cases() []testCase {
 	}
 
 	// Labels that an alert query consumes or overwrites cannot be preserved.
-	add("fullAlerting", fullAlerting, "severity", alertingPreserved+"application alerting rules: severity")
-	add("fullAlerting", fullAlerting, "phase", alertingPreserved+"application alerting rules: phase")
-	add("fullAlerting", fullAlerting, "revision", alertingPreserved+"application alerting rules: revision")
-	add("fullAlerting", fullAlerting, "access_mode", alertingPreserved+"storage alerting rules: access_mode")
-	add("fullAlerting", fullAlerting, "git_version", alertingPreserved+"system alerting rules: git_version")
-	add("fullAlerting", fullAlerting, "le", alertingPreserved+"kube-apiserver alerting rules: le")
-	add("isolatedKubeletAlerts", isolatedKubeletAlerts, "node", alertingPreserved+"kubelet alerting rules: node")
-	add("multiClusterAlerting", multiClusterAlerting, "pod", alertingPreserved+"multi-cluster CPU and memory overcommit alerts: pod")
+	add("appsAlerts", appsAlerts, "severity", alertingPreserved+"application alerting rules: severity")
+	add("appsAlerts", appsAlerts, "phase", alertingPreserved+"application alerting rules: phase")
+	add("appsAlerts", appsAlerts, "revision", alertingPreserved+"application alerting rules: revision")
+	add("storageAlerts", storageAlerts, "access_mode", alertingPreserved+"storage alerting rules: access_mode")
+	add("systemAlerts", systemAlerts, "git_version", alertingPreserved+"system alerting rules: git_version")
+	add("apiserverAlerts", apiserverAlert, "le", alertingPreserved+"kube-apiserver alerting rules: le")
+	add("kubeletAlerts", kubeletAlerts, "node", alertingPreserved+"kubelet alerting rules: node")
+	// The overcommit and burn-rate checks do not depend on showMultiCluster or the SLO windows.
+	add("resourceAlerts", resourceAlerts, "pod", alertingPreserved+"kubernetes-resources alerting rules: pod")
+	add("resourceAlertsMultiCluster", resourceAlerts.withConfig("showMultiCluster: true,"), "pod", alertingPreserved+"kubernetes-resources alerting rules: pod")
+	add("apiserverAlertsNoWindows", apiserverAlert.withConfig(noAPIWindows), "long", alertingPreserved+"kube-apiserver alerting rules: long")
 
 	// Configured values have to be valid Prometheus label names.
 	for _, label := range []string{"tenant-id", "", "9tenant"} {
@@ -208,8 +235,8 @@ func TestRenderFailures(t *testing.T) {
 	}
 
 	all := cases()
-	if len(all) != 45 {
-		t.Fatalf("expected 45 cases, got %d; update this count together with the table", len(all))
+	if len(all) != 50 {
+		t.Fatalf("expected 50 cases, got %d; update this count together with the table", len(all))
 	}
 	seen := map[string]bool{}
 	for _, tc := range all {

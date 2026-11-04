@@ -17,20 +17,16 @@ local utils = import '../lib/utils.libsonnet';
 
 {
   prometheusRules+:: {
-    local additionalGrouping = utils.rejectGroupingLabels(
-      $._config.additionalGrouping.recordingRules,
-      ['__name__', 'code', 'le', 'resource', 'scope', 'verb'],
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
       'kube-apiserver availability recording rules',
-      'additionalGrouping.recordingRules'
+      ['code', 'le', 'resource', 'scope', 'verb']
     ),
-    local groupingLabels(labels) = utils.groupingLabels(labels, additionalGrouping),
     local config = $._config {
-      groupingCluster: utils.groupingLabels(
-        [$._config.clusterLabel],
-        additionalGrouping
-      ),
-      groupingClusterVerbScope: groupingLabels([$._config.clusterLabel, 'verb', 'scope']),
-      groupingClusterVerbScopeLe: groupingLabels([$._config.clusterLabel, 'verb', 'scope', 'le']),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      groupingClusterVerbScope: grouping.by([$._config.clusterLabel, 'verb', 'scope']),
+      groupingClusterVerbScopeLe: grouping.by([$._config.clusterLabel, 'verb', 'scope', 'le']),
     },
     local SLODays = $._config.SLOs.apiserver.days + 'd',
     local verbs = [
@@ -54,7 +50,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'code:apiserver_request_total:increase%s' % SLODays,
             expr: |||
               sum by (%s) (code_verb:apiserver_request_total:increase%s{%s})
-            ||| % [groupingLabels([$._config.clusterLabel, 'code']), SLODays, verb.selector],
+            ||| % [grouping.by([$._config.clusterLabel, 'code']), SLODays, verb.selector],
             labels: {
               verb: verb.type,
             },
@@ -71,7 +67,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'cluster_verb_scope_le:apiserver_request_sli_duration_seconds_bucket:increase%s' % SLODays,
             expr: |||
               sum by (%s) (avg_over_time(cluster_verb_scope_le:apiserver_request_sli_duration_seconds_bucket:increase1h[%s]) * 24 * %s)
-            ||| % [groupingLabels([$._config.clusterLabel, 'verb', 'scope', 'le']), SLODays, $._config.SLOs.apiserver.days],
+            ||| % [grouping.by([$._config.clusterLabel, 'verb', 'scope', 'le']), SLODays, $._config.SLOs.apiserver.days],
           },
           {
             record: 'cluster_verb_scope:apiserver_request_sli_duration_seconds_count:increase1h',
@@ -83,7 +79,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'cluster_verb_scope:apiserver_request_sli_duration_seconds_count:increase%s' % SLODays,
             expr: |||
               sum by (%s) (cluster_verb_scope_le:apiserver_request_sli_duration_seconds_bucket:increase%s{le="+Inf"})
-            ||| % [groupingLabels([$._config.clusterLabel, 'verb', 'scope']), SLODays],
+            ||| % [grouping.by([$._config.clusterLabel, 'verb', 'scope']), SLODays],
           },
           {
             record: 'apiserver_request:availability%s' % SLODays,
@@ -168,7 +164,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'code_resource:apiserver_request_total:rate5m',
             expr: |||
               sum by (%s) (rate(apiserver_request_total{%s}[5m]))
-            ||| % [groupingLabels([$._config.clusterLabel, 'code', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector])],
+            ||| % [grouping.by([$._config.clusterLabel, 'code', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector])],
             labels: {
               verb: verb.type,
             },
@@ -179,7 +175,7 @@ local utils = import '../lib/utils.libsonnet';
             record: 'code_verb:apiserver_request_total:increase1h',
             expr: |||
               sum by (%s) (increase(apiserver_request_total{%s,verb=~"LIST|GET|POST|PUT|PATCH|DELETE",code=~"%s"}[1h]))
-            ||| % [groupingLabels([$._config.clusterLabel, 'code', 'verb']), $._config.kubeApiserverSelector, code],
+            ||| % [grouping.by([$._config.clusterLabel, 'code', 'verb']), $._config.kubeApiserverSelector, code],
           }
           for code in ['2..', '3..', '4..', '5..']
         ],
