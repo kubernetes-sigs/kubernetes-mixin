@@ -120,7 +120,7 @@ local timeSeries = g.panel.timeSeries;
         ]),
 
         tsPanel.new('CPU Throttling')
-        + tsPanel.gridPos.withW(24)
+        + tsPanel.gridPos.withW(12)
         + tsPanel.standardOptions.withUnit('percentunit')
         + tsPanel.queryOptions.withTargets([
           prometheus.new(
@@ -168,7 +168,7 @@ local timeSeries = g.panel.timeSeries;
         ]),
 
         tsPanel.new('Threads')
-        + tsPanel.gridPos.withW(24)
+        + tsPanel.gridPos.withW(12)
         + tsPanel.standardOptions.withUnit('short')
         + tsPanel.queryOptions.withTargets([
           prometheus.new(
