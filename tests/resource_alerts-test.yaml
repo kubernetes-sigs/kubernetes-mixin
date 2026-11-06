@@ -46,6 +46,70 @@ tests:
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-cputhrottlinghigh"
 
 - interval: 1m
+  name: KubeContainerMemoryPressure fires when a container is fully stalled on memory above the threshold
+  input_series:
+  # 12s of full stall per minute: 20% of the time.
+  - series: 'container_pressure_memory_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="test-container", id="/kubepods/pod1/c1", instance="node1", job="cadvisor"}'
+    values: '0+12x20'
+  # Duplicate series for the same container must not break the rule or double the value.
+  - series: 'container_pressure_memory_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="test-container", id="/kubepods/pod1/c1", instance="node1", job="cadvisor", endpoint="https-metrics"}'
+    values: '0+12x20'
+  # 3s per minute: 5% of the time, below the threshold.
+  - series: 'container_pressure_memory_stalled_seconds_total{cluster="cluster1", namespace="default", pod="quiet-pod", container="test-container", id="/kubepods/pod2/c2", instance="node1", job="cadvisor"}'
+    values: '0+3x20'
+  # Pod-level cgroup (container="") is ignored.
+  - series: 'container_pressure_memory_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="", id="/kubepods/pod1", instance="node1", job="cadvisor"}'
+    values: '0+30x20'
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeContainerMemoryPressure
+  - eval_time: 20m
+    alertname: KubeContainerMemoryPressure
+    exp_alerts:
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "default"
+        pod: "test-pod"
+        container: "test-container"
+      exp_annotations:
+        description: "Container test-container in pod test-pod in namespace default was fully stalled on memory 20% of the time."
+        summary: "Container is stalled on memory."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontainermemorypressure"
+
+- interval: 1m
+  name: KubeContainerIOPressure fires when a container is fully stalled on I/O above the threshold
+  input_series:
+  # 12s of full stall per minute: 20% of the time.
+  - series: 'container_pressure_io_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="test-container", id="/kubepods/pod1/c1", instance="node1", job="cadvisor"}'
+    values: '0+12x20'
+  # Duplicate series for the same container must not break the rule or double the value.
+  - series: 'container_pressure_io_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="test-container", id="/kubepods/pod1/c1", instance="node1", job="cadvisor", endpoint="https-metrics"}'
+    values: '0+12x20'
+  # 3s per minute: 5% of the time, below the threshold.
+  - series: 'container_pressure_io_stalled_seconds_total{cluster="cluster1", namespace="default", pod="quiet-pod", container="test-container", id="/kubepods/pod2/c2", instance="node1", job="cadvisor"}'
+    values: '0+3x20'
+  # Pod-level cgroup (container="") is ignored.
+  - series: 'container_pressure_io_stalled_seconds_total{cluster="cluster1", namespace="default", pod="test-pod", container="", id="/kubepods/pod1", instance="node1", job="cadvisor"}'
+    values: '0+30x20'
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeContainerIOPressure
+  - eval_time: 20m
+    alertname: KubeContainerIOPressure
+    exp_alerts:
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "default"
+        pod: "test-pod"
+        container: "test-container"
+      exp_annotations:
+        description: "Container test-container in pod test-pod in namespace default was fully stalled on I/O 20% of the time."
+        summary: "Container is stalled on I/O."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecontaineriopressure"
+
+- interval: 1m
   name: KubeQuotaAlmostFull fires when quota usage is above 90%
   input_series:
   - series: 'kube_resourcequota{cluster="cluster1", namespace="test-ns", resourcequota="cpu-quota", resource="requests.cpu", type="used", job="kube-state-metrics", instance="ksm1"}'
