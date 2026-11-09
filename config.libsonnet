@@ -155,5 +155,9 @@
 
     // Controls workload_type label value format: false = lowercase, true = PascalCase
     usePascalCaseForWorkloadTypeLabelValues: false,
+
+    // Generate rules/alerts/dashboards that consume native histograms
+    // instead of classic _bucket-based ones.
+    nativeHistograms: false,
   },
 }
