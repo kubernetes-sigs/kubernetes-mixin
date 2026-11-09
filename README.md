@@ -258,7 +258,12 @@ Kubernetes-mixin can support dashboards across multiple clusters. You need eithe
 
 ## Native histograms
 
-Set `nativeHistograms: true` in `_config` to switch `histogram_quantile` rules, alerts, and dashboard queries (along with companion rate queries) to Prometheus native histograms instead of classic `_bucket` and `_count` series. This option requires Prometheus v3.8.0+ configured to scrape native histograms. The fixed-bucket API server SLO availability and burnrate rules still use `apiserver_request_sli_duration_seconds_bucket` and `apiserver_request_sli_duration_seconds_count`.
+Set `nativeHistograms: true` in `_config` to switch `histogram_quantile` rules, alerts, and dashboard queries (along with companion rate queries) to Prometheus native histograms instead of classic `_bucket` and `_count` series. This option requires Prometheus v3.8.0+ with `scrape_native_histograms: true`.
+
+Set these Prometheus scrape options to keep full rule, alert, and dashboard coverage:
+
+- `always_scrape_classic_histograms: true` on `kube-apiserver` so the fixed-bucket SLO availability and burnrate rules still receive `apiserver_request_sli_duration_seconds_bucket` and `apiserver_request_sli_duration_seconds_count`.
+- `convert_classic_histograms_to_nhcb: true` on `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler` when scraping Kubernetes releases where `apiserver_client_certificate_expiration_seconds`, `workqueue_queue_duration_seconds`, and `rest_client_request_duration_seconds` expose only classic buckets.
 
 ```jsonnet
     // Opt-in to Prometheus native histogram queries (requires Prometheus v3.8.0+).
