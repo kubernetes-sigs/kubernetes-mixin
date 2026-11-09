@@ -646,7 +646,7 @@ local var = g.dashboard.variable;
       + g.dashboard.time.withTo('now')
       + g.dashboard.withRefresh($._config.grafanaK8s.refresh)
       + g.dashboard.withVariables([variables.datasource, variables.cluster, variables.namespace])
-      + annotations.withContainerRestarts($._config.grafanaK8s.containerRestartAnnotation, $._config.grafanaK8s.containerRestartAnnotationEnable)
+      + annotations.withContainerRestarts($._config, windows=true)
       + g.dashboard.withPanels(g.util.grid.wrapPanels(panels, panelWidth=24, panelHeight=7)),
 
     'k8s-resources-windows-pod.json':
@@ -866,7 +866,7 @@ local var = g.dashboard.variable;
       + g.dashboard.time.withTo('now')
       + g.dashboard.withRefresh($._config.grafanaK8s.refresh)
       + g.dashboard.withVariables([variables.datasource, variables.cluster, variables.namespace, variables.pod])
-      + annotations.withContainerRestarts($._config.grafanaK8s.containerRestartAnnotation, $._config.grafanaK8s.containerRestartAnnotationEnable)
+      + annotations.withContainerRestarts($._config, podMatcher='=', windows=true)
       + g.dashboard.withPanels(g.util.grid.wrapPanels(panels, panelWidth=24, panelHeight=7)),
 
     'k8s-windows-cluster-rsrc-use.json':
