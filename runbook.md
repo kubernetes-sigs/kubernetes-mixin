@@ -200,6 +200,16 @@ This page collects this repositories alerts and begins the process of describing
 + *Severity*: info
 + *Runbook*: [Link](https://runbooks.prometheus-operator.dev/runbooks/kubernetes/cputhrottlinghigh/)
 
+##### Alert Name: "KubeContainerMemoryPressure"
++ *Message*: `Container is stalled on memory.`
++ *Severity*: warning
++ *Action*: All of the container's tasks are waiting on memory (reclaim, swap-in or refaults) for a large share of the time. Check `container_memory_working_set_bytes` against the memory limit and raise the limit or reduce the working set.
+
+##### Alert Name: "KubeContainerIOPressure"
++ *Message*: `Container is stalled on I/O.`
++ *Severity*: warning
++ *Action*: All of the container's tasks are waiting on block I/O for a large share of the time. Check the volume's throughput and IOPS limits, `container_fs_*` metrics and other I/O-heavy pods on the same node.
+
 ### Group Name: "kubernetes-storage"
 
 ##### Alert Name: "KubePersistentVolumeFillingUp"
