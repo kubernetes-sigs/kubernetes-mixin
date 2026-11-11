@@ -43,7 +43,7 @@ func (values *stringList) Set(value string) error {
 	return nil
 }
 
-var grafanaDuration = regexp.MustCompile(`\$\{?(?:__)?(?:interval|rate_interval|resolution)\}?`)
+var grafanaDuration = regexp.MustCompile(`\$\{__range_s\}s|\$__range_ss|\$\{?(?:__)?(?:interval|rate_interval|resolution)\}?`)
 
 func main() {
 	var ruleFiles stringList
