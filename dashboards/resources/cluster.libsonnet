@@ -202,9 +202,9 @@ local timeSeries = g.panel.timeSeries;
               'Value #B': 'Workloads',
               'Value #C': 'CPU Usage',
               'Value #D': 'CPU Requests',
-              'Value #E': 'CPU Requests %',
+              'Value #E': 'CPU Usage/Requests %',
               'Value #F': 'CPU Limits',
-              'Value #G': 'CPU Limits %',
+              'Value #G': 'CPU Usage/Limits %',
             },
           }),
         ])
@@ -319,9 +319,9 @@ local timeSeries = g.panel.timeSeries;
               'Value #B': 'Workloads',
               'Value #C': 'Memory Usage',
               'Value #D': 'Memory Requests',
-              'Value #E': 'Memory Requests %',
+              'Value #E': 'Memory Usage/Requests %',
               'Value #F': 'Memory Limits',
-              'Value #G': 'Memory Limits %',
+              'Value #G': 'Memory Usage/Limits %',
             },
           }),
         ])
