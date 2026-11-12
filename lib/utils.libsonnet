@@ -138,7 +138,7 @@ local requireAlertGroupingInRecordingRules(labels, recordingLabels, context) =
   // If kind of rule is not defined try to detect rule type by alert name
   // additionalLabels are the validated additionalGrouping.alertingRules of the calling module.
   // Without them, the configured list is used as is.
-  wrap_rule_for_labels(rule, config, additionalLabels=null):
+  wrap_rule_for_labels(rule, config, additionalLabels):
     // Detect Kind of rule from name unless hidden `kind field is passed in the rule`
     local kind =
       if 'kind' in rule then rule.kind
@@ -161,7 +161,7 @@ local requireAlertGroupingInRecordingRules(labels, recordingLabels, context) =
       metric: 'kube_%s_labels' % kind,
     };
     local additionalMatchingLabels = withoutLabels(
-      if additionalLabels == null then configuredGroupingLabels(config, 'alertingRules') else additionalLabels,
+      if additionalLabels == null then [] else additionalLabels,
       labels.join_labels + ['alertname'] + (if std.objectHas(rule, 'labels') then std.objectFields(rule.labels) else [])
     );
     local matchingLabels =

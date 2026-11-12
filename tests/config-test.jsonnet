@@ -112,7 +112,8 @@ assert std.length(replacedGrouping({ recordingRules: ['tenant'] }).prometheusAle
 assert std.length(replacedGrouping({}).prometheusAlerts.groups) > 0;
 assert utils.wrap_rule_for_labels(
   { alert: 'KubePodCrashLooping', expr: 'up' },
-  { pods_join_labels: ['label_team'], namespaceLabel: 'namespace', clusterLabel: 'cluster' }
+  { pods_join_labels: ['label_team'], namespaceLabel: 'namespace', clusterLabel: 'cluster' },
+  []
 ).expr == '(up) * on (pod,namespace,cluster) group_left(label_team) kube_pod_labels';
 
 local additionalGrouping = (mixin + (import '../rules/windows.libsonnet')) {
