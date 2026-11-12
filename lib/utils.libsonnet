@@ -119,11 +119,11 @@ local requireAlertGroupingInRecordingRules(labels, recordingLabels, context) =
     {
       labels: labels,
       by(queryLabels, excluded=[]):: groupingLabels(queryLabels, withoutLabels(labels, excluded)),
-      // Checks that the labels, minus the excluded ones, which the alert does not read from
+      // Checks that the labels, minus the inherentlyRecordedLabels, which the alert does not read from
       // recording rules, are also configured for the recording rules that back the alert.
-      requireRecorded(excluded, alertContext)::
+      requireRecorded(inherentlyRecordedLabels, alertContext)::
         requireAlertGroupingInRecordingRules(
-          withoutLabels(labels, excluded),
+          withoutLabels(labels, inherentlyRecordedLabels),
           configuredGroupingLabels(config, 'recordingRules'),
           alertContext
         ),
