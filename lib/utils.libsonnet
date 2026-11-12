@@ -46,11 +46,17 @@ local validateGroupingLabels(labels, groupingConfig) =
     std.length(chars) > 0 &&
     (isLetter(chars[0]) || chars[0] == '_') &&
     std.all([isLetter(char) || isDigit(char) || char == '_' for char in chars]);
+  local reservedLabelName(label) =
+    local chars = std.stringChars(label);
+    std.length(chars) > 2 &&
+    (chars[0] == '_') && (chars[1] == '_');
   [
     if std.type(label) != 'string'
     then error '%s must contain only Prometheus label name strings, got %s' % [groupingConfig, std.type(label)]
     else if !validLabelName(label)
     then error '%s contains an invalid Prometheus label name: %s' % [groupingConfig, label]
+    else if reservedLabelName(label)
+    then error '%s contains a reserved Prometheus label name that should not be used for grouping: %s' % [groupingConfig, label]
     else label
     for label in labels
   ];
