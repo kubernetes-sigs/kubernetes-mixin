@@ -33,6 +33,23 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
+      'kubelet alerting rules',
+      ['condition', 'instance', 'job', 'le', 'node', 'resource', 'status', 'unit']
+    ),
+    local config = $._config {
+      groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
+      groupingClusterInstance: grouping.by([$._config.clusterLabel, 'instance']),
+      matchingClusterInstance: grouping.by([$._config.clusterLabel, 'instance'], ['eviction_signal', 'operation_type']),
+      groupingClusterInstanceNode: grouping.by([$._config.clusterLabel, 'instance', 'node'], ['eviction_signal', 'operation_type']),
+      groupingClusterEvictionSignalInstance: grouping.by([$._config.clusterLabel, 'eviction_signal', 'instance']),
+      groupingClusterInstanceLe: grouping.by([$._config.clusterLabel, 'instance', 'le']),
+      groupingClusterInstanceLeOperationType: grouping.by([$._config.clusterLabel, 'instance', 'le', 'operation_type']),
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+    },
+
     groups+: [
       {
         name: 'kubernetes-system-kubelet',
@@ -40,9 +57,9 @@ local utils = import '../lib/utils.libsonnet';
           {
             expr: |||
               kube_node_status_condition{%(kubeStateMetricsSelector)s,condition="Ready",status="true"} == 0
-              and on (%(clusterLabel)s, node)
+              and on (%(groupingClusterNode)s)
               kube_node_spec_unschedulable{%(kubeStateMetricsSelector)s} == 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -59,9 +76,9 @@ local utils = import '../lib/utils.libsonnet';
             alert: 'KubeNodePressure',
             expr: |||
               kube_node_status_condition{%(kubeStateMetricsSelector)s,condition=~"(MemoryPressure|DiskPressure|PIDPressure)",status="true"} == 1
-              and on (%(clusterLabel)s, node)
+              and on (%(groupingClusterNode)s)
               kube_node_spec_unschedulable{%(kubeStateMetricsSelector)s} == 0
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'info',
             },
@@ -97,19 +114,19 @@ local utils = import '../lib/utils.libsonnet';
             // We have to ignore this special node in the KubeletTooManyPods alert.
             expr: |||
               (
-                max by (%(clusterLabel)s, instance) (
+                max by (%(groupingClusterInstance)s) (
                   kubelet_running_pods{%(kubeletSelector)s} > 1
                 )
-                * on (%(clusterLabel)s, instance) group_left(node)
-                max by (%(clusterLabel)s, instance, node) (
+                * on (%(matchingClusterInstance)s) group_left(node)
+                max by (%(groupingClusterInstanceNode)s) (
                   kubelet_node_name{%(kubeletSelector)s}
                 )
               )
-              / on (%(clusterLabel)s, node) group_left()
-              max by (%(clusterLabel)s, node) (
+              / on (%(groupingClusterNode)s) group_left()
+              max by (%(groupingClusterNode)s) (
                 kube_node_status_capacity{%(kubeStateMetricsSelector)s, resource="pods"} != 1
               ) > 0.95
-            ||| % $._config,
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'info',
@@ -124,10 +141,10 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeNodeReadinessFlapping',
             expr: |||
-              sum(changes(kube_node_status_condition{%(kubeStateMetricsSelector)s,status="true",condition="Ready"}[15m])) by (%(clusterLabel)s, node) > 2
-              and on (%(clusterLabel)s, node)
+              sum(changes(kube_node_status_condition{%(kubeStateMetricsSelector)s,status="true",condition="Ready"}[15m])) by (%(groupingClusterNode)s) > 2
+              and on (%(groupingClusterNode)s)
               kube_node_spec_unschedulable{%(kubeStateMetricsSelector)s} == 0
-            ||| % $._config,
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'warning',
@@ -142,13 +159,13 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeNodeEviction',
             expr: |||
-              sum(rate(kubelet_evictions{%(kubeletSelector)s}[15m])) by(%(clusterLabel)s, eviction_signal, instance)
-              * on (%(clusterLabel)s, instance) group_left(node)
-              max by (%(clusterLabel)s, instance, node) (
+              sum(rate(kubelet_evictions{%(kubeletSelector)s}[15m])) by(%(groupingClusterEvictionSignalInstance)s)
+              * on (%(matchingClusterInstance)s) group_left(node)
+              max by (%(groupingClusterInstanceNode)s) (
                 kubelet_node_name{%(kubeletSelector)s}
               )
               > %(KubeNodeEvictionRateThreshold)s
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'info',
             },
@@ -162,9 +179,14 @@ local utils = import '../lib/utils.libsonnet';
           },
           {
             alert: 'KubeletPlegDurationHigh',
-            expr: |||
-              node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
-            ||| % $._config,
+            expr:
+              assert std.isArray(grouping.requireRecorded(
+                [$._config.clusterLabel, 'instance', 'node', 'quantile', 'le'],
+                'KubeletPlegDurationHigh'
+              ));
+              |||
+                node_quantile:kubelet_pleg_relist_duration_seconds:histogram_quantile{quantile="0.99"} >= 10
+              ||| % $._config,
             'for': '5m',
             labels: {
               severity: 'warning',
@@ -180,18 +202,18 @@ local utils = import '../lib/utils.libsonnet';
             alert: 'KubeletPodStartUpLatencyHigh',
             expr: |||
               histogram_quantile(0.99,
-                sum by (%(clusterLabel)s, instance, le) (
-                  topk by (%(clusterLabel)s, instance, le, operation_type) (1,
+                sum by (%(groupingClusterInstanceLe)s) (
+                  topk by (%(groupingClusterInstanceLeOperationType)s) (1,
                     rate(kubelet_pod_worker_duration_seconds_bucket{%(kubeletSelector)s}[5m])
                   )
                 )
               )
-              * on(%(clusterLabel)s, instance) group_left(node)
-              topk by (%(clusterLabel)s, instance, node) (1,
+              * on(%(matchingClusterInstance)s) group_left(node)
+              topk by (%(groupingClusterInstanceNode)s) (1,
                 kubelet_node_name{%(kubeletSelector)s}
               )
               > 60
-            ||| % $._config,
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'warning',
@@ -305,10 +327,10 @@ local utils = import '../lib/utils.libsonnet';
             // reports nodes exist but no kubelet targets are up for that cluster.
             alert: 'KubeletDown',
             expr: |||
-              count by (%(clusterLabel)s) (kube_node_info{%(kubeStateMetricsSelector)s})
-              unless on (%(clusterLabel)s)
-              count by (%(clusterLabel)s) (up{%(kubeletSelector)s} == 1)
-            ||| % $._config,
+              count by (%(groupingCluster)s) (kube_node_info{%(kubeStateMetricsSelector)s})
+              unless on (%(groupingCluster)s)
+              count by (%(groupingCluster)s) (up{%(kubeletSelector)s} == 1)
+            ||| % config,
             'for': '15m',
             labels: {
               severity: 'critical',

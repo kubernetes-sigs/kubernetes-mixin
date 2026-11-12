@@ -29,6 +29,9 @@ PROMTOOL_BIN=$(BIN_DIR)/promtool
 PINT_BIN=$(BIN_DIR)/pint
 METRICS_BIN=$(BIN_DIR)/required-metrics
 METRICS_FILE=metrics.txt
+MIXIN_SOURCES=mixin.libsonnet config.libsonnet lib/utils.libsonnet
+ADDITIONAL_GROUPING_RULES=tmp/additional-grouping-rules.yaml
+ADDITIONAL_GROUPING_ALERTS=tmp/additional-grouping-alerts.yaml
 TOOLING=$(JB_BIN) $(JSONNETLINT_BIN) $(JSONNET_BIN) $(JSONNETFMT_BIN) $(PROMTOOL_BIN) $(MARKDOWNFMT_BIN) $(VALE_BIN) $(PINT_BIN)
 NPROC ?= $(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 JSONNETFMT_ARGS=-n 2 --max-blank-lines 2 --string-style s --comment-style s
@@ -109,11 +112,15 @@ jsonnet-fmt: $(JSONNETFMT_BIN)
 markdownfmt: $(MARKDOWNFMT_BIN)
 	@for file in $(MD_FILES); do $(MARKDOWNFMT_BIN) -w -gofmt $$file; done
 
-prometheus_alerts.yaml: $(JSONNET_BIN) mixin.libsonnet lib/alerts.jsonnet alerts/*.libsonnet
+prometheus_alerts.yaml: $(JSONNET_BIN) $(MIXIN_SOURCES) lib/alerts.jsonnet alerts/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/alerts.jsonnet > $@
 
-prometheus_rules.yaml: $(JSONNET_BIN) mixin.libsonnet lib/rules.jsonnet rules/*.libsonnet
+prometheus_rules.yaml: $(JSONNET_BIN) $(MIXIN_SOURCES) lib/rules.jsonnet rules/*.libsonnet
 	@$(JSONNET_BIN) -J vendor -S lib/rules.jsonnet > $@
+
+tmp/additional-grouping-%.yaml: tests/additional-grouping-%.jsonnet $(JSONNET_BIN) $(JSONNET_VENDOR) $(MIXIN_SOURCES) rules/*.libsonnet alerts/*.libsonnet
+	@mkdir -p $(@D)
+	@$(JSONNET_BIN) -J vendor -S $< > $@.tmp && mv $@.tmp $@
 
 $(OUT_DIR)/.dashboards-generated: $(JSONNET_BIN) $(JSONNET_VENDOR) mixin.libsonnet lib/dashboards.jsonnet $(DASHBOARD_SOURCES)
 	@mkdir -p $(OUT_DIR)
@@ -179,9 +186,10 @@ clean:
 .PHONY: config-test
 config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
+	@cd scripts && go test ./configtest
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml $(ADDITIONAL_GROUPING_RULES) $(ADDITIONAL_GROUPING_ALERTS)
 	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 

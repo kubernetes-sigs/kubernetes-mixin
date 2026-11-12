@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   _config+:: {
     kubeStateMetricsSelector: error 'must provide selector for kube-state-metrics',
@@ -35,6 +37,17 @@
   },
 
   prometheusAlerts+:: {
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
+      'storage alerting rules',
+      ['access_mode']
+    ),
+    local config = $._config {
+      matchingPersistentVolumeClaimAccessMode: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim']),
+      matchingPersistentVolumeClaimLabels: grouping.by([$._config.clusterLabel, 'namespace', 'persistentvolumeclaim'], ['label_excluded_from_alerts']),
+    },
+
     groups+: [
       {
         name: 'kubernetes-storage',
@@ -49,11 +62,11 @@
               ) < %(volumeFreeSpacePercentageCritical)s
               and
               kubelet_volume_stats_used_bytes{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimAccessMode)s)
               kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimLabels)s)
               kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
-            ||| % $._config,
+            ||| % config,
             'for': '1m',
             labels: {
               severity: 'critical',
@@ -75,11 +88,11 @@
               kubelet_volume_stats_used_bytes{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
               and
               predict_linear(kubelet_volume_stats_available_bytes{%(prefixedNamespaceSelector)s%(kubeletSelector)s}[%(volumeFullPredictionSampleTime)s], 4 * 24 * 3600) < 0
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimAccessMode)s)
               kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimLabels)s)
               kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
-            ||| % $._config,
+            ||| % config,
             'for': '1h',
             labels: {
               severity: 'warning',
@@ -99,11 +112,11 @@
               ) < %(volumeFreeInodesPercentageCritical)s
               and
               kubelet_volume_stats_inodes_used{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimAccessMode)s)
               kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimLabels)s)
               kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
-            ||| % $._config,
+            ||| % config,
             'for': '1m',
             labels: {
               severity: 'critical',
@@ -125,11 +138,11 @@
               kubelet_volume_stats_inodes_used{%(prefixedNamespaceSelector)s%(kubeletSelector)s} > 0
               and
               predict_linear(kubelet_volume_stats_inodes_free{%(prefixedNamespaceSelector)s%(kubeletSelector)s}[%(volumeFullPredictionSampleTime)s], 4 * 24 * 3600) < 0
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimAccessMode)s)
               kube_persistentvolumeclaim_access_mode{%(prefixedNamespaceSelector)s access_mode="ReadOnlyMany"} == 1
-              unless on(%(clusterLabel)s, namespace, persistentvolumeclaim)
+              unless on(%(matchingPersistentVolumeClaimLabels)s)
               kube_persistentvolumeclaim_labels{%(prefixedNamespaceSelector)s%(pvExcludedSelector)s} == 1
-            ||| % $._config,
+            ||| % config,
             'for': '1h',
             labels: {
               severity: 'warning',

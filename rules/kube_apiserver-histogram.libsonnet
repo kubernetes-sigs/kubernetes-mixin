@@ -13,8 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   prometheusRules+:: {
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
+      'kube-apiserver histogram recording rules',
+      ['le', 'quantile', 'verb']
+    ),
     local verbs = [
       { type: 'read', selector: $._config.kubeApiserverReadSelector },
       { type: 'write', selector: $._config.kubeApiserverWriteSelector },
@@ -28,8 +36,8 @@
             {
               record: 'cluster_quantile:apiserver_request_sli_duration_seconds:histogram_quantile',
               expr: |||
-                histogram_quantile(0.99, sum by (%s, le, resource) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
-              ||| % [$._config.clusterLabel, std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
+                histogram_quantile(0.99, sum by (%s) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
+              ||| % [grouping.by([$._config.clusterLabel, 'le', 'resource']), std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
               labels: {
                 verb: verb.type,
                 quantile: '0.99',
