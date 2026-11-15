@@ -60,4 +60,21 @@ assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_events:rate500ms');
 assert averagedRecords(exoticRules) == std.set(['apiserver_request:burnrate2w']);
 
+// A negative PSI threshold leaves that pressure alert out and keeps the other one.
+local alertNames(groups) = std.set([rule.alert for rule in groupRules(groups, 'kubernetes-resources')]);
+local withPressurePercents(memory, io) = mixin {
+  _config+:: {
+    containerMemoryPressurePercent: memory,
+    containerIOPressurePercent: io,
+  },
+};
+local defaultAlerts = alertNames(mixin.prometheusAlerts.groups);
+local noMemoryAlerts = alertNames(withPressurePercents(-1, 10).prometheusAlerts.groups);
+local noPressureAlerts = alertNames(withPressurePercents(-1, -1).prometheusAlerts.groups);
+assert std.member(defaultAlerts, 'KubeContainerMemoryPressure');
+assert std.member(defaultAlerts, 'KubeContainerIOPressure');
+assert !std.member(noMemoryAlerts, 'KubeContainerMemoryPressure');
+assert std.member(noMemoryAlerts, 'KubeContainerIOPressure');
+assert std.setDiff(defaultAlerts, noPressureAlerts) == std.set(['KubeContainerMemoryPressure', 'KubeContainerIOPressure']);
+
 true
