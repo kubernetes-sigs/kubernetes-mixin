@@ -75,15 +75,24 @@
                 sum without (mode) (
                   rate(node_cpu_seconds_total{mode!="idle",mode!="iowait",mode!="steal",%(nodeExporterSelector)s}[5m])
                 )
+                * on (%(clusterLabel)s, namespace, %(podLabel)s) group_left(node)
+                topk by(%(clusterLabel)s, namespace, %(podLabel)s) (1, node_namespace_pod:kube_pod_info:)
               )
             ||| % $._config,
           },
           {
-            // This rule gives cpu utilization per cluster
+            // This rule gives cpu utilization per cluster, weighted by the
+            // number of CPUs of each node.
             record: 'cluster:node_cpu:ratio_rate5m',
             expr: |||
-              avg by (%(clusterLabel)s) (
+              sum by (%(clusterLabel)s) (
                 node:node_cpu_utilization:ratio_rate5m
+                * on (%(clusterLabel)s, node)
+                node:node_num_cpu:sum
+              )
+              /
+              sum by (%(clusterLabel)s) (
+                node:node_num_cpu:sum
               )
             ||| % $._config,
           },

@@ -1,0 +1,55 @@
+# Copyright kubernetes-mixin Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+rule_files:
+- ../prometheus_rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+# node_cpu_seconds_total has no node label, so node:node_cpu_utilization:ratio_rate5m
+# has to get it from node_namespace_pod:kube_pod_info:. node-1 has 2 CPUs at 50%,
+# node-2 has 1 CPU at 100%. The cluster ratio is weighted by the number of CPUs.
+- interval: 1m
+  input_series:
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="0",instance="10.0.0.1:9100",job="node-exporter",mode="user",namespace="monitoring",pod="node-exporter-1"}'
+    values: '0+30x10'
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="0",instance="10.0.0.1:9100",job="node-exporter",mode="idle",namespace="monitoring",pod="node-exporter-1"}'
+    values: '0+30x10'
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="1",instance="10.0.0.1:9100",job="node-exporter",mode="user",namespace="monitoring",pod="node-exporter-1"}'
+    values: '0+30x10'
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="1",instance="10.0.0.1:9100",job="node-exporter",mode="idle",namespace="monitoring",pod="node-exporter-1"}'
+    values: '0+30x10'
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="0",instance="10.0.0.2:9100",job="node-exporter",mode="user",namespace="monitoring",pod="node-exporter-2"}'
+    values: '0+60x10'
+  - series: 'node_cpu_seconds_total{cluster="kubernetes",cpu="0",instance="10.0.0.2:9100",job="node-exporter",mode="idle",namespace="monitoring",pod="node-exporter-2"}'
+    values: '0+0x10'
+  - series: 'kube_pod_info{cluster="kubernetes",job="kube-state-metrics",namespace="monitoring",node="node-1",pod="node-exporter-1"}'
+    values: '1x10'
+  - series: 'kube_pod_info{cluster="kubernetes",job="kube-state-metrics",namespace="monitoring",node="node-2",pod="node-exporter-2"}'
+    values: '1x10'
+  promql_expr_test:
+  - eval_time: 10m
+    expr: node:node_cpu_utilization:ratio_rate5m
+    exp_samples:
+    - value: 0.5
+      labels: 'node:node_cpu_utilization:ratio_rate5m{cluster="kubernetes",node="node-1"}'
+    - value: 1
+      labels: 'node:node_cpu_utilization:ratio_rate5m{cluster="kubernetes",node="node-2"}'
+  - eval_time: 10m
+    expr: cluster:node_cpu:ratio_rate5m
+    exp_samples:
+    - value: 0.6666666666666666
+      labels: 'cluster:node_cpu:ratio_rate5m{cluster="kubernetes"}'
