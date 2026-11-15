@@ -26,10 +26,25 @@ local utils = import '../lib/utils.libsonnet';
   },
 
   prometheusAlerts+:: {
+    local grouping = utils.grouping(
+      $._config,
+      'alertingRules',
+      'application alerting rules',
+      ['condition', 'label_excluded_from_alerts', 'owner_kind', 'phase', 'reason', 'revision', 'status']
+    ),
+    local config = $._config {
+      groupingNamespacePodJobCluster: grouping.by(['namespace', 'pod', 'job', $._config.clusterLabel]),
+      groupingNamespacePodOwnerKindCluster: grouping.by(['namespace', 'pod', 'owner_kind', $._config.clusterLabel], ['job']),
+      matchingNamespacePodCluster: grouping.by(['namespace', 'pod', $._config.clusterLabel], ['job']),
+      groupingNamespaceStatefulsetJobCluster: grouping.by(['namespace', 'statefulset', 'job', $._config.clusterLabel]),
+      groupingNamespaceJobNameCluster: grouping.by(['namespace', 'job_name', $._config.clusterLabel]),
+      matchingNamespaceHorizontalpodautoscalerCluster: grouping.by(['namespace', 'horizontalpodautoscaler', $._config.clusterLabel]),
+    },
+
     groups+: [
       {
         name: 'kubernetes-apps',
-        rules: [utils.wrap_rule_for_labels(rule, $._config) for rule in self.rules_],
+        rules: [utils.wrap_rule_for_labels(rule, $._config, grouping.labels) for rule in self.rules_],
         rules_:: [
           {
             expr: |||
@@ -53,22 +68,22 @@ local utils = import '../lib/utils.libsonnet';
             // label exists for 2 values. This avoids "many-to-many matching
             // not allowed" errors when joining with kube_pod_status_phase.
             expr: |||
-              sum by (namespace, pod, job, %(clusterLabel)s) (
-                max by(namespace, pod, job, %(clusterLabel)s) (
+              sum by (%(groupingNamespacePodJobCluster)s) (
+                max by(%(groupingNamespacePodJobCluster)s) (
                   kube_pod_status_phase{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, phase=~"Pending|Unknown"}
                   or
                   (
                     kube_pod_status_phase{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, phase="Running"} == 1
-                    and on(namespace, pod, %(clusterLabel)s)
+                    and on(%(matchingNamespacePodCluster)s)
                     kube_pod_status_ready{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, condition="true"} == 0
                   )
-                ) * on(namespace, pod, %(clusterLabel)s) group_left() topk by(namespace, pod, %(clusterLabel)s) (
-                  1, max by(namespace, pod, owner_kind, %(clusterLabel)s) (kube_pod_owner{owner_kind!="Job"})
+                ) * on(%(matchingNamespacePodCluster)s) group_left() topk by(%(matchingNamespacePodCluster)s) (
+                  1, max by(%(groupingNamespacePodOwnerKindCluster)s) (kube_pod_owner{owner_kind!="Job"})
                 )
               ) > 0
-              unless on(namespace, pod, %(clusterLabel)s)
+              unless on(%(matchingNamespacePodCluster)s)
               kube_pod_status_reason{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s, reason="SchedulingGated"} == 1
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -185,23 +200,23 @@ local utils = import '../lib/utils.libsonnet';
           {
             expr: |||
               (
-                max by(namespace, statefulset, job, %(clusterLabel)s) (
+                max by(%(groupingNamespaceStatefulsetJobCluster)s) (
                   kube_statefulset_status_current_revision{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                     unless
                   kube_statefulset_status_update_revision{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 )
-                  * on(namespace, statefulset, job, %(clusterLabel)s)
+                  * on(%(groupingNamespaceStatefulsetJobCluster)s)
                 (
                   kube_statefulset_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                     !=
                   kube_statefulset_status_replicas_updated{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 )
-              )  and on(namespace, statefulset, job, %(clusterLabel)s) (
+              )  and on(%(groupingNamespaceStatefulsetJobCluster)s) (
                 changes(kube_statefulset_status_replicas_updated{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}[5m])
                   ==
                 0
               )
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -306,12 +321,12 @@ local utils = import '../lib/utils.libsonnet';
           {
             alert: 'KubeJobNotCompleted',
             expr: |||
-              time() - max by(namespace, job_name, %(clusterLabel)s) (kube_job_status_start_time{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
+              time() - max by(%(groupingNamespaceJobNameCluster)s) (kube_job_status_start_time{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                 and
               kube_job_status_active{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0) > %(kubeJobTimeoutDuration)s
-                unless on(namespace, job_name, %(clusterLabel)s)
-              max by(namespace, job_name, %(clusterLabel)s) (kube_job_labels{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s,%(kubeJobExcludedSelector)s} == 1)
-            ||| % $._config,
+                unless on(%(groupingNamespaceJobNameCluster)s)
+              max by(%(groupingNamespaceJobNameCluster)s) (kube_job_labels{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s,%(kubeJobExcludedSelector)s} == 1)
+            ||| % config,
             labels: {
               severity: 'warning',
             },
@@ -374,17 +389,17 @@ local utils = import '../lib/utils.libsonnet';
                   ==
                 kube_horizontalpodautoscaler_spec_max_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
               )
-              and on(namespace, horizontalpodautoscaler, %(clusterLabel)s) (
+              and on(%(matchingNamespaceHorizontalpodautoscalerCluster)s) (
                 kube_horizontalpodautoscaler_spec_max_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                   !=
                 kube_horizontalpodautoscaler_spec_min_replicas{%(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
               )
-              and on(namespace, horizontalpodautoscaler, %(clusterLabel)s) (
+              and on(%(matchingNamespaceHorizontalpodautoscalerCluster)s) (
                 kube_horizontalpodautoscaler_status_condition{condition="ScalingLimited", status="true", %(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s}
                   ==
                 1
               )
-            ||| % $._config,
+            ||| % config,
             labels: {
               severity: 'warning',
             },
