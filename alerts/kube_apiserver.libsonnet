@@ -66,11 +66,15 @@ local utils = import '../lib/utils.libsonnet';
         rules: [
           {
             alert: 'KubeClientCertificateExpiration',
-            expr: |||
-              histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationWarningSeconds)s
-              and
-              on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
-            ||| % $._config,
+            expr: (if $._config.nativeHistograms then |||
+                     histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationWarningSeconds)s
+                     and
+                     on(job, %(clusterLabel)s, instance) histogram_count(apiserver_client_certificate_expiration_seconds{%(kubeApiserverSelector)s}) > 0
+                   ||| else |||
+                     histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationWarningSeconds)s
+                     and
+                     on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
+                   |||) % $._config,
             'for': '5m',
             labels: {
               severity: 'warning',
@@ -85,11 +89,15 @@ local utils = import '../lib/utils.libsonnet';
           },
           {
             alert: 'KubeClientCertificateExpiration',
-            expr: |||
-              histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationCriticalSeconds)s
-              and
-              on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
-            ||| % $._config,
+            expr: (if $._config.nativeHistograms then |||
+                     histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationCriticalSeconds)s
+                     and
+                     on(job, %(clusterLabel)s, instance) histogram_count(apiserver_client_certificate_expiration_seconds{%(kubeApiserverSelector)s}) > 0
+                   ||| else |||
+                     histogram_quantile(0.01, sum without (%(namespaceLabel)s, service, endpoint) (rate(apiserver_client_certificate_expiration_seconds_bucket{%(kubeApiserverSelector)s}[5m]))) < %(certExpirationCriticalSeconds)s
+                     and
+                     on(job, %(clusterLabel)s, instance) apiserver_client_certificate_expiration_seconds_count{%(kubeApiserverSelector)s} > 0
+                   |||) % $._config,
             'for': '5m',
             labels: {
               severity: 'critical',

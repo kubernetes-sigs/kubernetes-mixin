@@ -100,7 +100,12 @@ local var = g.dashboard.variable;
         + tsPanel.gridPos.withW(10)
         + tsPanel.standardOptions.withUnit('ops')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'sum(rate(kubeproxy_sync_proxy_rules_duration_seconds_count{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'sum(histogram_count(rate(kubeproxy_sync_proxy_rules_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s])))'
+             else 'sum(rate(kubeproxy_sync_proxy_rules_duration_seconds_count{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))') % $._config
+          )
           + prometheus.withLegendFormat('rate'),
         ]),
 
@@ -108,21 +113,36 @@ local var = g.dashboard.variable;
         + tsPanel.gridPos.withW(10)
         + tsPanel.standardOptions.withUnit('s')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'histogram_quantile(0.99,rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'histogram_quantile(0.99,rate(kubeproxy_sync_proxy_rules_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))'
+             else 'histogram_quantile(0.99,rate(kubeproxy_sync_proxy_rules_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))') % $._config
+          )
           + prometheus.withLegendFormat('{{instance}}'),
         ]),
 
         tsPanel.new('Network Programming Rate')
         + tsPanel.standardOptions.withUnit('ops')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'sum(rate(kubeproxy_network_programming_duration_seconds_count{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'sum(histogram_count(rate(kubeproxy_network_programming_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s])))'
+             else 'sum(rate(kubeproxy_network_programming_duration_seconds_count{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))') % $._config
+          )
           + prometheus.withLegendFormat('rate'),
         ]),
 
         tsPanel.new('Network Programming Latency 99th Quantile')
         + tsPanel.standardOptions.withUnit('s')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s])) by (instance, le))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s])) by (instance))'
+             else 'histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s])) by (instance, le))') % $._config
+          )
           + prometheus.withLegendFormat('{{instance}}'),
         ]),
 
@@ -147,7 +167,12 @@ local var = g.dashboard.variable;
         + tsPanel.gridPos.withW(16)
         + tsPanel.standardOptions.withUnit('ops')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s,instance=~"$instance",verb="POST"}[%(grafanaIntervalVar)s])) by (verb, le))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s,instance=~"$instance",verb="POST"}[%(grafanaIntervalVar)s])) by (verb))'
+             else 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s,instance=~"$instance",verb="POST"}[%(grafanaIntervalVar)s])) by (verb, le))') % $._config
+          )
           + prometheus.withLegendFormat('{{verb}}'),
         ]),
 
@@ -155,7 +180,12 @@ local var = g.dashboard.variable;
         + tsPanel.gridPos.withW(24)
         + tsPanel.standardOptions.withUnit('s')
         + tsPanel.queryOptions.withTargets([
-          prometheus.new('${datasource}', 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance", verb="GET"}[%(grafanaIntervalVar)s])) by (verb, le))' % $._config)
+          prometheus.new(
+            '${datasource}',
+            (if $._config.nativeHistograms
+             then 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance", verb="GET"}[%(grafanaIntervalVar)s])) by (verb))'
+             else 'histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds_bucket{%(clusterLabel)s="$cluster", %(kubeProxySelector)s, instance=~"$instance", verb="GET"}[%(grafanaIntervalVar)s])) by (verb, le))') % $._config
+          )
           + prometheus.withLegendFormat('{{verb}}'),
         ]),
 

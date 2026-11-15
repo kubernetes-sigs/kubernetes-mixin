@@ -26,9 +26,11 @@
         rules: [
           {
             record: 'cluster_quantile:%s:histogram_quantile' % metric,
-            expr: |||
-              histogram_quantile(%(quantile)s, sum(rate(%(metric)s_bucket{%(kubeSchedulerSelector)s}[5m])) without(instance, %(podLabel)s))
-            ||| % ({ quantile: quantile, metric: metric } + $._config),
+            expr: (if $._config.nativeHistograms then |||
+                     histogram_quantile(%(quantile)s, sum(rate(%(metric)s{%(kubeSchedulerSelector)s}[5m])) without(instance, %(podLabel)s))
+                   ||| else |||
+                     histogram_quantile(%(quantile)s, sum(rate(%(metric)s_bucket{%(kubeSchedulerSelector)s}[5m])) without(instance, %(podLabel)s))
+                   |||) % ({ quantile: quantile, metric: metric } + $._config),
             labels: {
               quantile: quantile,
             },

@@ -231,7 +231,9 @@ local override = ts.standardOptions.override;
           + timeSeries.queryOptions.withTargets([
             g.query.prometheus.new(
               '${datasource}',
-              'histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{%(kubeApiserverSelector)s, instance=~"$instance", %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (instance, name, le))' % $._config,
+              (if $._config.nativeHistograms
+               then 'histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds{%(kubeApiserverSelector)s, instance=~"$instance", %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (instance, name))'
+               else 'histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{%(kubeApiserverSelector)s, instance=~"$instance", %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (instance, name, le))') % $._config,
             )
             + g.query.prometheus.withLegendFormat('{{instance}} {{name}}'),
           ]),

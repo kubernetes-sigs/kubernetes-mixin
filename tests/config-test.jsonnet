@@ -60,4 +60,104 @@ assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_
 assert std.member(recordNames(exoticRules), 'cluster_verb:apiserver_request_sli_events:rate500ms');
 assert averagedRecords(exoticRules) == std.set(['apiserver_request:burnrate2w']);
 
+// Opting into nativeHistograms replaces all classic _bucket histogram_quantile queries across
+// recording rules, alerts, and dashboards with native histogram expressions.
+local histogramQuantileExprs(exprs) = [
+  expr
+  for expr in exprs
+  if std.length(std.findSubstr('histogram_quantile(', expr)) > 0
+];
+
+local ruleExprs(groups) = [
+  rule.expr
+  for group in groups
+  for rule in group.rules
+];
+
+local dashboardTargetExprs(dashboard) =
+  local panels =
+    (if 'panels' in dashboard then dashboard.panels else []) +
+    (if 'rows' in dashboard then [p for r in dashboard.rows for p in r.panels] else []);
+  [
+    target.expr
+    for panel in panels
+    if 'targets' in panel
+    for target in panel.targets
+    if 'expr' in target
+  ];
+
+local histogramDashboards = [
+  'apiserver.json',
+  'controller-manager.json',
+  'kubelet.json',
+  'proxy.json',
+  'scheduler.json',
+];
+
+local isNativeHistogramQuantile(expr) =
+  std.findSubstr('_bucket', expr) == [] &&
+  std.findSubstr('le)', expr) == [] &&
+  std.findSubstr('le,', expr) == [];
+
+local classicRuleExprs = histogramQuantileExprs(ruleExprs(mixin.prometheusRules.groups));
+local classicAlertExprs = histogramQuantileExprs(ruleExprs(mixin.prometheusAlerts.groups));
+local classicDashboardAllExprs = [
+  dashboardTargetExprs(mixin.grafanaDashboards[d])
+  for d in histogramDashboards
+];
+local classicDashboardExprs = [
+  histogramQuantileExprs(exprs)
+  for exprs in classicDashboardAllExprs
+];
+
+assert std.length(classicRuleExprs) == 14;
+assert std.all([std.length(std.findSubstr('_bucket', expr)) > 0 for expr in classicRuleExprs]);
+assert std.length(classicAlertExprs) == 3;
+assert std.all([std.length(std.findSubstr('_bucket', expr)) > 0 for expr in classicAlertExprs]);
+assert [std.length(exprs) for exprs in classicDashboardExprs] == [1, 3, 8, 4, 6];
+assert std.length([
+  expr
+  for exprs in classicDashboardAllExprs
+  for expr in exprs
+  if std.length(std.findSubstr('_count{', expr)) > 0
+]) == 11;
+
+local withNativeHistograms = mixin {
+  _config+:: {
+    nativeHistograms: true,
+  },
+};
+local nativeRuleExprs = histogramQuantileExprs(ruleExprs(withNativeHistograms.prometheusRules.groups));
+local nativeAlertExprs = histogramQuantileExprs(ruleExprs(withNativeHistograms.prometheusAlerts.groups));
+local nativeDashboardAllExprs = [
+  dashboardTargetExprs(withNativeHistograms.grafanaDashboards[d])
+  for d in histogramDashboards
+];
+local nativeDashboardExprs = [
+  histogramQuantileExprs(exprs)
+  for exprs in nativeDashboardAllExprs
+];
+
+assert std.length(nativeRuleExprs) == 14;
+assert std.all([isNativeHistogramQuantile(expr) for expr in nativeRuleExprs]);
+assert std.length(nativeAlertExprs) == 3;
+assert std.all([isNativeHistogramQuantile(expr) for expr in nativeAlertExprs]);
+assert [std.length(exprs) for exprs in nativeDashboardExprs] == [1, 3, 8, 4, 6];
+assert std.all([
+  isNativeHistogramQuantile(expr)
+  for exprs in nativeDashboardExprs
+  for expr in exprs
+]);
+assert std.all([
+  std.findSubstr('_bucket', expr) == [] && std.findSubstr('_count{', expr) == []
+  for exprs in nativeDashboardAllExprs
+  for expr in exprs
+]);
+assert std.length(
+  std.findSubstr(
+    'histogram_count(apiserver_client_certificate_expiration_seconds',
+    std.manifestJsonEx(groupRules(withNativeHistograms.prometheusAlerts.groups, 'kubernetes-system-apiserver'), '  ')
+  )
+) > 0;
+
 true
