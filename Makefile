@@ -182,7 +182,7 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 
 .PHONY: test
 test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
-	@cd scripts && go test ./metrics
+	@cd scripts && go test ./metrics ./metric-availability
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
 
 $(BIN_DIR):
