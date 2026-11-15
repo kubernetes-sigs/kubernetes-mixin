@@ -184,3 +184,122 @@ tests:
         description: "HPA ns1/hpa1 has been running at max replicas for longer than 15 minutes."
         runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpamaxedout"
         summary: "HPA is running at max replicas"
+
+- interval: 1m
+  name: KubeHpaReplicasMismatch fires when current replicas are at min and desired replicas are higher
+  input_series:
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_status_desired_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
+    values: '5x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa1"}'
+    values: '10x15'
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeHpaReplicasMismatch
+  - eval_time: 15m
+    alertname: KubeHpaReplicasMismatch
+    exp_alerts:
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "ns1"
+        horizontalpodautoscaler: "hpa1"
+        job: "kube-state-metrics"
+      exp_annotations:
+        description: "HPA ns1/hpa1 has not matched the desired number of replicas for longer than 15 minutes."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch"
+        summary: "HPA has not matched desired number of replicas."
+
+- interval: 1m
+  name: KubeHpaReplicasMismatch fires when current replicas are at max and desired replicas are lower
+  input_series:
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
+    values: '10x15'
+  - series: 'kube_horizontalpodautoscaler_status_desired_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
+    values: '4x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa2"}'
+    values: '10x15'
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeHpaReplicasMismatch
+  - eval_time: 15m
+    alertname: KubeHpaReplicasMismatch
+    exp_alerts:
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "ns1"
+        horizontalpodautoscaler: "hpa2"
+        job: "kube-state-metrics"
+      exp_annotations:
+        description: "HPA ns1/hpa2 has not matched the desired number of replicas for longer than 15 minutes."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch"
+        summary: "HPA has not matched desired number of replicas."
+
+- interval: 1m
+  name: KubeHpaReplicasMismatch does not fire when desired replicas are below min
+  input_series:
+  # The case from #509: desired replicas is 0 while min replicas is 1.
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '1x15'
+  - series: 'kube_horizontalpodautoscaler_status_desired_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '0x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '1x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa3"}'
+    values: '5x15'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: KubeHpaReplicasMismatch
+
+- interval: 1m
+  name: KubeHpaReplicasMismatch fires when desired replicas are at max or at min
+  input_series:
+  # Current replicas are between min and max; desired replicas equal max (hpa4) or min (hpa5).
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa4"}'
+    values: '6x15'
+  - series: 'kube_horizontalpodautoscaler_status_desired_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa4"}'
+    values: '10x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa4"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa4"}'
+    values: '10x15'
+  - series: 'kube_horizontalpodautoscaler_status_current_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa5"}'
+    values: '6x15'
+  - series: 'kube_horizontalpodautoscaler_status_desired_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa5"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_spec_min_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa5"}'
+    values: '2x15'
+  - series: 'kube_horizontalpodautoscaler_spec_max_replicas{job="kube-state-metrics", cluster="cluster1", namespace="ns1", horizontalpodautoscaler="hpa5"}'
+    values: '10x15'
+  alert_rule_test:
+  - eval_time: 14m
+    alertname: KubeHpaReplicasMismatch
+  - eval_time: 15m
+    alertname: KubeHpaReplicasMismatch
+    exp_alerts:
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "ns1"
+        horizontalpodautoscaler: "hpa4"
+        job: "kube-state-metrics"
+      exp_annotations:
+        description: "HPA ns1/hpa4 has not matched the desired number of replicas for longer than 15 minutes."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch"
+        summary: "HPA has not matched desired number of replicas."
+    - exp_labels:
+        severity: "warning"
+        cluster: "cluster1"
+        namespace: "ns1"
+        horizontalpodautoscaler: "hpa5"
+        job: "kube-state-metrics"
+      exp_annotations:
+        description: "HPA ns1/hpa5 has not matched the desired number of replicas for longer than 15 minutes."
+        runbook_url: "https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubehpareplicasmismatch"
+        summary: "HPA has not matched desired number of replicas."
