@@ -674,7 +674,7 @@ tests:
         pod: kube-state-metrics-b894d84cc-d6htw
         service: kube-state-metrics
       exp_annotations:
-        summary: "Node has as active Condition."
+        summary: "Node has MemoryPressure as an active Condition."
         description: 'minikube has active Condition MemoryPressure. This is caused by resource usage exceeding eviction thresholds.'
         runbook_url: 'https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubenodepressure'
 
