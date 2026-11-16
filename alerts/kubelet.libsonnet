@@ -70,7 +70,7 @@ local utils = import '../lib/utils.libsonnet';
               description: '{{ $labels.node }}%s has active Condition {{ $labels.condition }}. This is caused by resource usage exceeding eviction thresholds.' % [
                 utils.ifShowMultiCluster($._config, ' on cluster {{ $labels.%(clusterLabel)s }}' % $._config),
               ],
-              summary: 'Node has as active Condition.',
+              summary: 'Node has {{ $labels.condition }} as an active Condition.',
             },
           },
           {
