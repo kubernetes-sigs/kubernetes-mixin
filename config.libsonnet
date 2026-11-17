@@ -155,5 +155,8 @@
 
     // Controls workload_type label value format: false = lowercase, true = PascalCase
     usePascalCaseForWorkloadTypeLabelValues: false,
+
+    // Whether to include additional Workload recording rules to aid in higher level aggregations.
+    includeExtendedWorkloadRecordingRules: false,
   },
 }
