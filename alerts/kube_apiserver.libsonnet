@@ -144,8 +144,21 @@ local utils = import '../lib/utils.libsonnet';
           },
           {
             alert: 'KubeAPITerminatedRequests',
+            // APF and max-inflight record dropped 429s in both counters. Keep
+            // non-429 terminations in the denominator for timeout paths that
+            // may not have reached the request_total instrumentation yet.
             expr: |||
-              sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) / ( sum by(%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s}[10m])) + sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m])) ) > 0.20
+              sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s}[10m]))
+              /
+              (
+                sum by(%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s}[10m]))
+                +
+                (
+                  sum by(%(clusterLabel)s) (rate(apiserver_request_terminations_total{%(kubeApiserverSelector)s,code!="429"}[10m]))
+                  or on(%(clusterLabel)s)
+                  0 * sum by(%(clusterLabel)s) (rate(apiserver_request_total{%(kubeApiserverSelector)s}[10m]))
+                )
+              ) > 0.20
             ||| % $._config,
             labels: {
               severity: 'warning',
