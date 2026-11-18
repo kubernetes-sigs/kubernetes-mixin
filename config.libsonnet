@@ -57,6 +57,16 @@
     horizontalpodautoscalers_join_labels: $._config.common_join_labels,
     jobs_join_labels: $._config.common_join_labels,
 
+    // List of annotations to join for different type of metrics
+    // Only works if your environment has kube_%s_annotations (e.g. kube_pod_annotations) available.
+    common_join_annotations: [],
+    pods_join_annotations: $._config.common_join_annotations,
+    statefulsets_join_annotations: $._config.common_join_annotations,
+    deployments_join_annotations: $._config.common_join_annotations,
+    daemonsets_join_annotations: $._config.common_join_annotations,
+    horizontalpodautoscalers_join_annotations: $._config.common_join_annotations,
+    jobs_join_annotations: $._config.common_join_annotations,
+
     // Grafana dashboard IDs are necessary for stable links for dashboards
     grafanaDashboardIDs: {
       'apiserver.json': std.md5('apiserver.json'),
