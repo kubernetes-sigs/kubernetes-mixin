@@ -346,6 +346,49 @@ local timeSeries = g.panel.timeSeries;
             ],
           },
         ]),
+
+        tsPanel.new('Memory Compaction Re-pack Rate')
+        + tsPanel.standardOptions.withUnit('ops')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionStallRate($._config),
+          )
+          + prometheus.withLegendFormat('compact stall'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionSuccessRate($._config),
+          )
+          + prometheus.withLegendFormat('compact success'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionFailRate($._config),
+          )
+          + prometheus.withLegendFormat('compact fail'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionDaemonWakeRate($._config),
+          )
+          + prometheus.withLegendFormat('kcompactd wake'),
+        ])
+        + tsPanel.standardOptions.withOverrides([
+          fieldOverride.byName.new('compact stall')
+          + fieldOverride.byName.withPropertiesFromOptions(
+            timeSeries.standardOptions.color.withMode('fixed')
+            + timeSeries.standardOptions.color.withFixedColor('red')
+          )
+          + fieldOverride.byName.withProperty('custom.lineStyle', { fill: 'dash', dash: [10, 10] })
+          + fieldOverride.byName.withProperty('custom.fillOpacity', 0),
+          fieldOverride.byName.new('kcompactd wake')
+          + fieldOverride.byName.withPropertiesFromOptions(
+            timeSeries.standardOptions.color.withMode('fixed')
+            + timeSeries.standardOptions.color.withFixedColor('blue')
+          )
+          + fieldOverride.byName.withProperty('custom.fillOpacity', 0),
+        ]),
       ];
 
       g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Node (Pods)' % $._config.grafanaK8s)

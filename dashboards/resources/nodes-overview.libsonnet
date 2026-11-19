@@ -142,6 +142,35 @@ local timeSeries = g.panel.timeSeries;
           )
           + prometheus.withLegendFormat('{{node}}'),
         ]),
+
+        // Memory compaction re-pack rate per node (direct stall/fail/success + kcompactd wake)
+        tsPanel.new('Memory Compaction Re-pack Rate per Node')
+        + tsPanel.standardOptions.withUnit('ops')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionStallRatePerNode($._config),
+          )
+          + prometheus.withLegendFormat('stall: {{node}}'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionFailRatePerNode($._config),
+          )
+          + prometheus.withLegendFormat('fail: {{node}}'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionSuccessRatePerNode($._config),
+          )
+          + prometheus.withLegendFormat('success: {{node}}'),
+
+          prometheus.new(
+            '${datasource}',
+            queries.memoryCompactionDaemonWakeRatePerNode($._config),
+          )
+          + prometheus.withLegendFormat('kcompactd wake: {{node}}'),
+        ]),
       ];
 
       g.dashboard.new('%(dashboardNamePrefix)sCompute Resources / Nodes Overview' % $._config.grafanaK8s)
