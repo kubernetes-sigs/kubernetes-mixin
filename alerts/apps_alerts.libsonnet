@@ -256,6 +256,8 @@ local utils = import '../lib/utils.libsonnet';
           {
             expr: |||
               kube_pod_container_status_waiting_reason{reason!="CrashLoopBackOff", %(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} > 0
+              unless on(namespace, pod, %(clusterLabel)s)
+              kube_pod_status_phase{phase=~"Failed|Succeeded", %(prefixedNamespaceSelector)s%(kubeStateMetricsSelector)s} == 1
             ||| % $._config,
             labels: {
               severity: 'warning',
