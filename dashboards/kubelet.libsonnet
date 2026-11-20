@@ -101,8 +101,6 @@ local var = g.dashboard.variable;
           statPanel('Actual Volume Count', 'none', 'sum(volume_manager_total_volumes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, instance=~"$instance", state="actual_state_of_world"})' % $._config),
         statDesiredVolumeCount:
           statPanel('Desired Volume Count', 'none', 'sum(volume_manager_total_volumes{%(clusterLabel)s="$cluster", %(kubeletSelector)s, instance=~"$instance",state="desired_state_of_world"})' % $._config),
-        statConfigErrorCount:
-          statPanel('Config Error Count', 'none', 'sum(rate(kubelet_node_config_error{%(clusterLabel)s="$cluster", %(kubeletSelector)s, instance=~"$instance"}[%(grafanaIntervalVar)s]))' % $._config),
 
         tsOperationRate:
           tsPanel.new('Operation Rate')
@@ -156,7 +154,7 @@ local var = g.dashboard.variable;
           tsPanel.new('Storage Operation Error Rate')
           + tsPanel.standardOptions.withUnit('ops')
           + tsPanel.queryOptions.withTargets([
-            prometheus.new('${datasource}', 'sum(rate(storage_operation_errors_total{%(clusterLabel)s="$cluster",%(kubeletSelector)s,instance=~"$instance"}[%(grafanaIntervalVar)s])) by (instance, operation_name, volume_plugin)' % $._config)
+            prometheus.new('${datasource}', 'sum(rate(storage_operation_duration_seconds_count{%(clusterLabel)s="$cluster",%(kubeletSelector)s,instance=~"$instance",status!="success"}[%(grafanaIntervalVar)s])) by (instance, operation_name, volume_plugin)' % $._config)
             + prometheus.withLegendFormat('{{instance}} {{operation_name}} {{volume_plugin}}'),
           ]),
         tsStorageOperationDuration:
@@ -258,7 +256,6 @@ local var = g.dashboard.variable;
             panels.statRunningContainers,
             panels.statActualVolumeCount,
             panels.statDesiredVolumeCount,
-            panels.statConfigErrorCount,
           ],
         },
 
