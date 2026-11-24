@@ -74,4 +74,17 @@
 
   memoryUsageSwapByPod(config)::
     'sum(max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container)(node_namespace_pod_container:container_memory_swap{%(clusterLabel)s="$cluster", node=~"$node",container!=""})) by (pod)' % config,
+
+  // Memory Compaction Queries
+  memoryCompactionStallRate(config)::
+    'sum(rate(node_vmstat_compact_stall{%(clusterLabel)s="$cluster", %(nodeExporterSelector)s, node=~"$node"}[%(grafanaIntervalVar)s]))' % config,
+
+  memoryCompactionFailRate(config)::
+    'sum(rate(node_vmstat_compact_fail{%(clusterLabel)s="$cluster", %(nodeExporterSelector)s, node=~"$node"}[%(grafanaIntervalVar)s]))' % config,
+
+  memoryCompactionSuccessRate(config)::
+    'sum(rate(node_vmstat_compact_success{%(clusterLabel)s="$cluster", %(nodeExporterSelector)s, node=~"$node"}[%(grafanaIntervalVar)s]))' % config,
+
+  memoryCompactionDaemonWakeRate(config)::
+    'sum(rate(node_vmstat_compact_daemon_wake{%(clusterLabel)s="$cluster", %(nodeExporterSelector)s, node=~"$node"}[%(grafanaIntervalVar)s]))' % config,
 }
