@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+local utils = import '../lib/utils.libsonnet';
+
 {
   _config+:: {
     kubeStateMetricsSelector: 'job="kube-state-metrics"',
@@ -21,6 +23,21 @@
   },
 
   prometheusRules+:: {
+    local grouping = utils.grouping(
+      $._config,
+      'recordingRules',
+      'node recording rules',
+      ['cpu', 'endpoint', 'instance', 'job', 'service'],
+      ['mode']
+    ),
+    local config = $._config {
+      groupingCluster: grouping.by([$._config.clusterLabel]),
+      groupingClusterNode: grouping.by([$._config.clusterLabel, 'node']),
+      groupingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', $._config.podLabel]),
+      groupingClusterNodeNamespacePod: grouping.by([$._config.clusterLabel, 'node', 'namespace', $._config.podLabel]),
+      matchingClusterNamespacePod: grouping.by([$._config.clusterLabel, 'namespace', $._config.podLabel], ['container', 'node']),
+    },
+
     groups+: [
       {
         name: 'node.rules',
@@ -35,22 +52,22 @@
             // below for instance.
             record: 'node_namespace_pod:kube_pod_info:',
             expr: |||
-              topk by(%(clusterLabel)s, namespace, %(podLabel)s) (1,
-                max by (%(clusterLabel)s, node, namespace, %(podLabel)s) (
+              topk by(%(matchingClusterNamespacePod)s) (1,
+                max by (%(groupingClusterNodeNamespacePod)s) (
                   label_replace(kube_pod_info{%(kubeStateMetricsSelector)s,node!=""}, "%(podLabel)s", "$1", "pod", "(.*)")
               ))
-            ||| % $._config,
+            ||| % config,
           },
           {
             // This rule gives the number of CPUs per node.
             record: 'node:node_num_cpu:sum',
             expr: |||
-              count by (%(clusterLabel)s, node) (
+              count by (%(groupingClusterNode)s) (
                 node_cpu_seconds_total{mode="idle",%(nodeExporterSelector)s}
-                * on (%(clusterLabel)s, namespace, %(podLabel)s) group_left(node)
-                topk by(%(clusterLabel)s, namespace, %(podLabel)s) (1, node_namespace_pod:kube_pod_info:)
+                * on (%(matchingClusterNamespacePod)s) group_left(node)
+                topk by(%(matchingClusterNamespacePod)s) (1, node_namespace_pod:kube_pod_info:)
               )
-            ||| % $._config,
+            ||| % config,
           },
           // Add separate rules for Available memory, so we can aggregate across clusters in dashboards.
           {
@@ -64,28 +81,28 @@
                   node_memory_MemFree_bytes{%(nodeExporterSelector)s} +
                   node_memory_Slab_bytes{%(nodeExporterSelector)s}
                 )
-              ) by (%(clusterLabel)s)
-            ||| % $._config,
+              ) by (%(groupingCluster)s)
+            ||| % config,
           },
           {
             // This rule gives cpu utilization per node.
             record: 'node:node_cpu_utilization:ratio_rate5m',
             expr: |||
-              avg by (%(clusterLabel)s, node) (
+              avg by (%(groupingClusterNode)s) (
                 sum without (mode) (
                   rate(node_cpu_seconds_total{mode!="idle",mode!="iowait",mode!="steal",%(nodeExporterSelector)s}[5m])
                 )
               )
-            ||| % $._config,
+            ||| % config,
           },
           {
             // This rule gives cpu utilization per cluster
             record: 'cluster:node_cpu:ratio_rate5m',
             expr: |||
-              avg by (%(clusterLabel)s) (
+              avg by (%(groupingCluster)s) (
                 node:node_cpu_utilization:ratio_rate5m
               )
-            ||| % $._config,
+            ||| % config,
           },
         ],
       },
