@@ -181,9 +181,18 @@ config-test: $(JSONNET_BIN) $(JSONNET_VENDOR)
 	@$(JSONNET_BIN) -J vendor tests/config-test.jsonnet > /dev/null
 
 .PHONY: test
-test: $(PROMTOOL_BIN) config-test prometheus_alerts.yaml prometheus_rules.yaml
+test: $(PROMTOOL_BIN) config-test dashboards-test prometheus_alerts.yaml prometheus_rules.yaml
 	@cd scripts && go test ./metrics
 	@$(PROMTOOL_BIN) test rules tests/*.yaml
+
+.PHONY: dashboards-test
+dashboards-test: $(JSONNET_BIN) $(PROMTOOL_BIN)
+	@tmp=$$(mktemp -d) && \
+		trap 'rm -rf "$$tmp"' EXIT && \
+		for f in tests/dashboards/*-test.jsonnet; do \
+			$(JSONNET_BIN) -S "$$f" > "$$tmp/$$(basename "$$f" .jsonnet).yaml" || exit 1; \
+		done && \
+		$(PROMTOOL_BIN) test rules "$$tmp"/*.yaml
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
