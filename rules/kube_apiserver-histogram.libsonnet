@@ -27,9 +27,11 @@
           [
             {
               record: 'cluster_quantile:apiserver_request_sli_duration_seconds:histogram_quantile',
-              expr: |||
-                histogram_quantile(0.99, sum by (%s, le, resource) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
-              ||| % [$._config.clusterLabel, std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
+              expr: (if $._config.nativeHistograms then |||
+                       histogram_quantile(0.99, sum by (%s, resource) (rate(apiserver_request_sli_duration_seconds{%s}[5m]))) > 0
+                     ||| else |||
+                       histogram_quantile(0.99, sum by (%s, le, resource) (rate(apiserver_request_sli_duration_seconds_bucket{%s}[5m]))) > 0
+                     |||) % [$._config.clusterLabel, std.join(',', [$._config.kubeApiserverSelector, verb.selector, $._config.kubeApiserverNonStreamingSelector])],
               labels: {
                 verb: verb.type,
                 quantile: '0.99',
