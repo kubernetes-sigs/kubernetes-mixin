@@ -174,6 +174,22 @@ The `prometheus_alerts.yaml` and `prometheus_rules.yaml` files then need to pass
 
 `metrics.txt` lists the source metrics used by the rendered alerts, rules, and dashboards. Run `make metrics` to regenerate it.
 
+### Compare required metrics with Kubernetes documentation
+
+The `metric-availability` command compares `metrics.txt` with a Kubernetes `test/instrumentation/documentation/documentation-list.yaml` file. Download that file from the Kubernetes release tag or commit you want to inspect, then run:
+
+```sh
+cd scripts
+go run ./metric-availability -required ../metrics.txt -documentation /path/to/documentation-list.yaml
+```
+
+The command writes a sorted, tab-separated report with two statuses:
+
+- `documented`: the supplied file defines the metric name or its histogram or summary series.
+- `not_in_supplied_documentation`: the name needs further investigation. This does not mean the metric is unavailable.
+
+This is a name comparison, not a compatibility test. The Kubernetes file does not cover all metric sources, including exporters and cAdvisor. The report does not verify labels, scrape configuration, feature gates, or whether a documented metric is enabled. It does not infer a metric's source from its name. Preserve the Kubernetes tag or commit and mixin revision alongside each report. Unmatched names do not cause a nonzero exit status. Invalid input and file errors do.
+
 ### Dashboards for Windows Nodes
 
 There exist separate dashboards for windows resources.
