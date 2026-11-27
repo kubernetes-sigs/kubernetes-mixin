@@ -64,10 +64,11 @@ local var = g.dashboard.variable;
     pod:
       var.query.new('pod')
       + var.query.withDatasourceFromVariable(self.datasource)
-      + var.query.queryTypes.withLabelValues(
-        'pod',
-        'container_network_receive_packets_total{%(clusterLabel)s="$cluster",namespace=~"$namespace"}' % config,
+      // Keep historical pods only when they have samples in the selected range.
+      + var.query.queryTypes.withQueryResult(
+        'count by (pod) (count_over_time(container_network_receive_packets_total{%(clusterLabel)s="$cluster",namespace=~"$namespace"}[${__range_s}s]))' % config,
       )
+      + var.query.withRegex('/pod="([^"]+)"/')
       + var.query.generalOptions.withCurrent('kube-system')
       + var.query.generalOptions.withLabel('pod')
       + var.query.refresh.onTime()
