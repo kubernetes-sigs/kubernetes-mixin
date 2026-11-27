@@ -16,6 +16,11 @@
 local utils = import '../lib/utils.libsonnet';
 
 {
+  // Allocatable resources of the nodes that can take new Pods. Cordoned nodes
+  // are left out: Pods from a failed node cannot be rescheduled onto them.
+  local schedulableAllocatable(resource) =
+    'kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"} unless on (%(clusterLabel)s, node) kube_node_spec_unschedulable{%(kubeStateMetricsSelector)s} == 1' % $._config { resource: resource },
+
   local kubeOvercommitExpression(resource) = if $._config.showMultiCluster then
     |||
       # Non-HA clusters.
@@ -23,7 +28,7 @@ local utils = import '../lib/utils.libsonnet';
         (
           sum by(%(clusterLabel)s) (namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
           -
-          sum by(%(clusterLabel)s) (kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"}) > 0
+          sum by(%(clusterLabel)s) (%(schedulableAllocatable)s) > 0
         )
         and
         count by (%(clusterLabel)s) (max by (%(clusterLabel)s, node) (kube_node_role{%(kubeStateMetricsSelector)s, role="control-plane"})) < 3
@@ -31,18 +36,24 @@ local utils = import '../lib/utils.libsonnet';
       or
       # HA clusters.
       (
-        sum by(%(clusterLabel)s) (namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
-        -
         (
-          # Skip clusters with only one allocatable node.
+          sum by(%(clusterLabel)s) (namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
+          -
           (
-            sum by (%(clusterLabel)s) (kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"})
+            sum by (%(clusterLabel)s) (%(schedulableAllocatable)s)
             -
-            max by (%(clusterLabel)s) (kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"})
+            max by (%(clusterLabel)s) (%(schedulableAllocatable)s)
           ) > 0
+        )
+        and on (%(clusterLabel)s)
+        # Skip clusters with only one node.
+        (
+          sum by (%(clusterLabel)s) (kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"})
+          -
+          max by (%(clusterLabel)s) (kube_node_status_allocatable{%(kubeStateMetricsSelector)s,resource="%(resource)s"})
         ) > 0
       )
-    ||| % $._config { resource: resource }
+    ||| % $._config { resource: resource, schedulableAllocatable: schedulableAllocatable(resource) }
   else
     |||
       # Non-HA clusters.
@@ -50,7 +61,7 @@ local utils = import '../lib/utils.libsonnet';
         (
           sum(namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
           -
-          sum(kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s}) > 0
+          sum(%(schedulableAllocatable)s) > 0
         )
         and
         count(max by (node) (kube_node_role{%(kubeStateMetricsSelector)s, role="control-plane"})) < 3
@@ -58,18 +69,24 @@ local utils = import '../lib/utils.libsonnet';
       or
       # HA clusters.
       (
-        sum(namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
-        -
         (
-          # Skip clusters with only one allocatable node.
+          sum(namespace_%(resource)s:kube_pod_container_resource_requests:sum{%(ignoringOverprovisionedWorkloadSelector)s})
+          -
           (
-            sum(kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s})
+            sum(%(schedulableAllocatable)s)
             -
-            max(kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s})
+            max(%(schedulableAllocatable)s)
           ) > 0
+        )
+        and
+        # Skip clusters with only one node.
+        (
+          sum(kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s})
+          -
+          max(kube_node_status_allocatable{resource="%(resource)s", %(kubeStateMetricsSelector)s})
         ) > 0
       )
-    ||| % $._config { resource: resource },
+    ||| % $._config { resource: resource, schedulableAllocatable: schedulableAllocatable(resource) },
 
   local kubeQuotaOvercommitExpression(resource) = if $._config.showMultiCluster then
     |||

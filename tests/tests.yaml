@@ -1670,3 +1670,115 @@ tests:
             description: Cluster has overcommitted memory resource requests for Pods by 2G bytes and cannot tolerate node failure.
             runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
             summary: Cluster has overcommitted memory resource requests.
+
+- name: KubeCPUOvercommit alert (cordoned node)
+  interval: 1m
+  input_series:
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="default"}'
+    values: '1.5x10'
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="kube-system"}'
+    values: '1.5x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n1", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n2", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n3", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n1", job="kube-state-metrics"}'
+    values: '0x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n2", job="kube-state-metrics"}'
+    values: '0x10'
+  # n3 is cordoned, so only n1 and n2 can take Pods.
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n3", job="kube-state-metrics"}'
+    values: '1x10'
+  alert_rule_test:
+  - eval_time: 9m
+    alertname: KubeCPUOvercommit
+  - eval_time: 10m
+    alertname: KubeCPUOvercommit
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+      exp_annotations:
+        description: Cluster has overcommitted CPU resource requests for Pods by 1.00 CPU shares and cannot tolerate node failure.
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
+        summary: Cluster has overcommitted CPU resource requests.
+
+- name: KubeCPUOvercommit alert (one schedulable node left)
+  interval: 1m
+  input_series:
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="default"}'
+    values: '0.5x10'
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="kube-system"}'
+    values: '0.5x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n1", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n2", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n3", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n1", job="kube-state-metrics"}'
+    values: '0x10'
+  # n2 and n3 are cordoned, so the cluster cannot tolerate the failure of n1.
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n2", job="kube-state-metrics"}'
+    values: '1x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n3", job="kube-state-metrics"}'
+    values: '1x10'
+  alert_rule_test:
+  - eval_time: 9m
+    alertname: KubeCPUOvercommit
+  - eval_time: 10m
+    alertname: KubeCPUOvercommit
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+      exp_annotations:
+        description: Cluster has overcommitted CPU resource requests for Pods by 1.00 CPU shares and cannot tolerate node failure.
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubecpuovercommit
+        summary: Cluster has overcommitted CPU resource requests.
+
+- name: KubeCPUOvercommit alert does not fire on a single node without control-plane role
+  interval: 1m
+  input_series:
+  - series: 'namespace_cpu:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="default"}'
+    values: '1x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n1", resource="cpu", job="kube-state-metrics"}'
+    values: '2x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n1", job="kube-state-metrics"}'
+    values: '0x10'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: KubeCPUOvercommit
+
+- name: KubeMemoryOvercommit alert (cordoned node)
+  interval: 1m
+  input_series:
+  - series: 'namespace_memory:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="default"}'
+    values: '1500000000x10' # 1.5 GB
+  - series: 'namespace_memory:kube_pod_container_resource_requests:sum{cluster="kubernetes", namespace="kube-system"}'
+    values: '1500000000x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n1", resource="memory", job="kube-state-metrics"}'
+    values: '2000000000x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n2", resource="memory", job="kube-state-metrics"}'
+    values: '2000000000x10'
+  - series: 'kube_node_status_allocatable{cluster="kubernetes", node="n3", resource="memory", job="kube-state-metrics"}'
+    values: '2000000000x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n1", job="kube-state-metrics"}'
+    values: '0x10'
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n2", job="kube-state-metrics"}'
+    values: '0x10'
+  # n3 is cordoned, so only n1 and n2 can take Pods.
+  - series: 'kube_node_spec_unschedulable{cluster="kubernetes", node="n3", job="kube-state-metrics"}'
+    values: '1x10'
+  alert_rule_test:
+  - eval_time: 9m
+    alertname: KubeMemoryOvercommit
+  - eval_time: 10m
+    alertname: KubeMemoryOvercommit
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+      exp_annotations:
+        description: Cluster has overcommitted memory resource requests for Pods by 1G bytes and cannot tolerate node failure.
+        runbook_url: https://github.com/kubernetes-sigs/kubernetes-mixin/tree/master/runbook.md#alert-name-kubememoryovercommit
+        summary: Cluster has overcommitted memory resource requests.
