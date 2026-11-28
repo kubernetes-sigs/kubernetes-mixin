@@ -167,6 +167,42 @@ local timeSeries = g.panel.timeSeries;
           },
         ]),
 
+        // PSI - CPU Pressure
+        tsPanel.new('CPU Pressure')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new('${datasource}', queries.cpuPressureWaiting($._config))
+          + prometheus.withLegendFormat('{{container}} - Some (waiting)'),
+
+          prometheus.new('${datasource}', queries.cpuPressureStalled($._config))
+          + prometheus.withLegendFormat('{{container}} - Full (stalled)'),
+        ]),
+
+        // PSI - Memory Pressure
+        tsPanel.new('Memory Pressure')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new('${datasource}', queries.memoryPressureWaiting($._config))
+          + prometheus.withLegendFormat('{{container}} - Some (waiting)'),
+
+          prometheus.new('${datasource}', queries.memoryPressureStalled($._config))
+          + prometheus.withLegendFormat('{{container}} - Full (stalled)'),
+        ]),
+
+        // PSI - I/O Pressure
+        tsPanel.new('I/O Pressure')
+        + tsPanel.gridPos.withW(24)
+        + tsPanel.standardOptions.withUnit('percentunit')
+        + tsPanel.queryOptions.withTargets([
+          prometheus.new('${datasource}', queries.ioPressureWaiting($._config))
+          + prometheus.withLegendFormat('{{container}} - Some (waiting)'),
+
+          prometheus.new('${datasource}', queries.ioPressureStalled($._config))
+          + prometheus.withLegendFormat('{{container}} - Full (stalled)'),
+        ]),
+
         table.new('CPU Quota')
         + table.gridPos.withW(24)
         + table.queryOptions.withTargets([

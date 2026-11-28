@@ -35,6 +35,25 @@
   cpuThrottling(config)::
     'sum(increase(container_cpu_cfs_throttled_periods_total{%(cadvisorSelector)s, namespace="$namespace", pod="$pod", container!="", %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (container) /sum(increase(container_cpu_cfs_periods_total{%(cadvisorSelector)s, namespace="$namespace", pod="$pod", container!="", %(clusterLabel)s="$cluster"}[%(grafanaIntervalVar)s])) by (container)' % config,
 
+  // PSI Queries
+  cpuPressureWaiting(config)::
+    'sum by (container) (rate(container_pressure_cpu_waiting_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
+  cpuPressureStalled(config)::
+    'sum by (container) (rate(container_pressure_cpu_stalled_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
+  memoryPressureWaiting(config)::
+    'sum by (container) (rate(container_pressure_memory_waiting_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
+  memoryPressureStalled(config)::
+    'sum by (container) (rate(container_pressure_memory_stalled_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
+  ioPressureWaiting(config)::
+    'sum by (container) (rate(container_pressure_io_waiting_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
+  ioPressureStalled(config)::
+    'sum by (container) (rate(container_pressure_io_stalled_seconds_total{%(cadvisorSelector)s, %(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""}[%(grafanaIntervalVar)s]))' % config,
+
   // CPU Quota Table Queries
   cpuRequestsByContainer(config)::
     'sum(max by (%(clusterLabel)s, %(namespaceLabel)s, pod, container)(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{%(clusterLabel)s="$cluster", namespace="$namespace", pod="$pod", container!=""})) by (container)' % config,
